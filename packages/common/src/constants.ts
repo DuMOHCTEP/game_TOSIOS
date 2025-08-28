@@ -32,6 +32,10 @@ export const PLAYER_MAX_LIVES = 3;
 export const PLAYER_WEAPON_SIZE = 12; // The bigger, the further away a bullet will be shot from.
 export const PLAYER_HEARING_DISTANCE = 256;
 
+// Monster Types
+export const MONSTER_TYPES = ['bat', 'aggressive', 'fast'] as const;
+export type MonsterType = typeof MONSTER_TYPES[number];
+
 // Monster
 export const MONSTERS_COUNT = 3;
 export const MONSTER_SIZE = 32;
@@ -44,6 +48,20 @@ export const MONSTER_IDLE_DURATION_MAX = 3000;
 export const MONSTER_PATROL_DURATION_MIN = 1000;
 export const MONSTER_PATROL_DURATION_MAX = 3000;
 export const MONSTER_ATTACK_BACKOFF = 3000;
+
+// Aggressive Monster (new type)
+export const MONSTER_AGGRESSIVE_SPEED_PATROL = 1.0;
+export const MONSTER_AGGRESSIVE_SPEED_CHASE = 2.0;
+export const MONSTER_AGGRESSIVE_ATTACK_BACKOFF = 2000; // 2 seconds
+export const MONSTER_AGGRESSIVE_KNOCKBACK_FORCE = 5.0;
+export const MONSTER_AGGRESSIVE_KNOCKBACK_DURATION = 300; // ms
+
+// Fast Monster (new type)
+export const MONSTER_FAST_SPEED_PATROL = 1.5;
+export const MONSTER_FAST_SPEED_CHASE = 2.5;
+export const MONSTER_FAST_ATTACK_BACKOFF = 2000; // 2 seconds
+export const MONSTER_FAST_DASH_FORCE = 8.0;
+export const MONSTER_FAST_DASH_COOLDOWN = 1500; // ms
 
 // Props (rectangle)
 export const FLASKS_COUNT = 3;

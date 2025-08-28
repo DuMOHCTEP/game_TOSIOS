@@ -412,6 +412,10 @@ export class GameState extends Schema {
                 false,
                 false,
             );
+
+            // Randomly select monster type
+            const monsterType = Constants.MONSTER_TYPES[Maths.getRandomInt(0, Constants.MONSTER_TYPES.length - 1)];
+
             const monster = new Monster(
                 body.x,
                 body.y,
@@ -419,6 +423,7 @@ export class GameState extends Schema {
                 this.map.width,
                 this.map.height,
                 Constants.MONSTER_LIVES,
+                monsterType
             );
 
             this.monsters.set(Maths.getRandomInt(0, 1000).toString(), monster);
@@ -444,13 +449,22 @@ export class GameState extends Schema {
             monster.attack();
             player.hurt();
 
+            // Apply knockback to aggressive monsters
+            if (monster.type === 'aggressive') {
+                monster.applyKnockback(player.x, player.y);
+            }
+
+            const monsterName = monster.type === 'bat' ? 'A bat' :
+                               monster.type === 'aggressive' ? 'An aggressive monster' :
+                               'A fast monster';
+
             if (!player.isAlive) {
                 this.onMessage({
                     type: 'killed',
                     from: 'server',
                     ts: Date.now(),
                     params: {
-                        killerName: 'A bat',
+                        killerName: monsterName,
                         killedName: player.name,
                     },
                 });

@@ -21,15 +21,31 @@ export class Monster extends BaseEntity {
 
     private _shadow: Graphics;
 
+    private _monsterType: string = 'bat';
+
+    private _knockbackX: number = 0;
+
+    private _knockbackY: number = 0;
+
+    private _isDashing: boolean = false;
+
     // Init
     constructor(monster: Models.MonsterJSON) {
         super({
             x: monster.x,
             y: monster.y,
             radius: monster.radius,
-            textures: MonstersTextures.Bat,
+            textures: MonstersTextures.Monster,
             zIndex: ZINDEXES.MONSTER,
         });
+
+        this._monsterType = monster.monsterType;
+        this._knockbackX = monster.knockbackX;
+        this._knockbackY = monster.knockbackY;
+        this._isDashing = monster.isDashing;
+
+        // Apply color tint based on monster type
+        this.applyMonsterTint();
 
         // Shadow
         this._shadow = new Graphics();
@@ -47,6 +63,87 @@ export class Monster extends BaseEntity {
     // Methods
     hurt() {
         Effects.flash(this.sprite, HURT_COLOR, 0xffffff);
+    }
+
+    updateFromServer(monster: Models.MonsterJSON) {
+        // Update position and rotation
+        this.x = monster.x;
+        this.y = monster.y;
+        this.rotation = monster.rotation;
+
+        // Update monster-specific properties
+        const typeChanged = this._monsterType !== monster.monsterType;
+        this._monsterType = monster.monsterType;
+        this._knockbackX = monster.knockbackX;
+        this._knockbackY = monster.knockbackY;
+        this._isDashing = monster.isDashing;
+
+        // Reapply base tint if monster type changed
+        if (typeChanged) {
+            this.applyMonsterTint();
+        }
+
+        // Apply visual effects based on state
+        this.updateVisualEffects();
+    }
+
+    private applyMonsterTint() {
+        // Apply base color tint based on monster type
+        switch (this._monsterType) {
+            case 'bat':
+                this.sprite.tint = 0xcccccc; // Light gray for basic bat
+                break;
+            case 'aggressive':
+                this.sprite.tint = 0xff4444; // Red for aggressive monster
+                break;
+            case 'fast':
+                this.sprite.tint = 0x4444ff; // Blue for fast monster
+                break;
+            default:
+                this.sprite.tint = 0xcccccc; // Default light gray
+                break;
+        }
+    }
+
+    private updateVisualEffects() {
+        // Get base tint for monster type
+        let baseTint = this.getBaseTintForType();
+
+        // Add knockback visual effect
+        if (Math.abs(this._knockbackX) > 0.1 || Math.abs(this._knockbackY) > 0.1) {
+            // Make the tint brighter/different during knockback
+            baseTint = this.adjustTintForKnockback(baseTint);
+        }
+
+        this.sprite.tint = baseTint;
+
+        // Add dash visual effect
+        if (this._isDashing) {
+            this.sprite.alpha = 0.7; // Semi-transparent during dash
+        } else {
+            this.sprite.alpha = 1.0; // Normal opacity
+        }
+    }
+
+    private getBaseTintForType(): number {
+        switch (this._monsterType) {
+            case 'bat':
+                return 0xcccccc; // Light gray
+            case 'aggressive':
+                return 0xff4444; // Red
+            case 'fast':
+                return 0x4444ff; // Blue
+            default:
+                return 0xcccccc;
+        }
+    }
+
+    private adjustTintForKnockback(baseTint: number): number {
+        // Make the tint brighter during knockback by increasing RGB values
+        const r = Math.min(255, ((baseTint >> 16) & 0xff) + 64);
+        const g = Math.min(255, ((baseTint >> 8) & 0xff) + 64);
+        const b = Math.min(255, (baseTint & 0xff) + 64);
+        return (r << 16) | (g << 8) | b;
     }
 
     // Setters
@@ -97,6 +194,22 @@ export class Monster extends BaseEntity {
 
     get toY() {
         return this._toY;
+    }
+
+    get monsterType(): string {
+        return this._monsterType;
+    }
+
+    get knockbackX(): number {
+        return this._knockbackX;
+    }
+
+    get knockbackY(): number {
+        return this._knockbackY;
+    }
+
+    get isDashing(): boolean {
+        return this._isDashing;
     }
 }
 

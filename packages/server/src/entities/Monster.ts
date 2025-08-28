@@ -1,4 +1,4 @@
-import { Constants, Maths } from '@tosios/common';
+import { Constants, Maths, MonsterType } from '@tosios/common';
 import { MapSchema, type } from '@colyseus/schema';
 import { Circle } from './Circle';
 import { Player } from '.';
@@ -8,6 +8,18 @@ type MonsterState = 'idle' | 'patrol' | 'chase';
 export class Monster extends Circle {
     @type('number')
     private rotation: number = 0;
+
+    @type('string')
+    private monsterType: MonsterType = 'bat';
+
+    @type('number')
+    private knockbackX: number = 0;
+
+    @type('number')
+    private knockbackY: number = 0;
+
+    @type('boolean')
+    private isDashing: boolean = false;
 
     // Hidden properties
     private mapWidth: number;
@@ -28,17 +40,42 @@ export class Monster extends Circle {
 
     private targetPlayerId: string = null;
 
+    // New monster type system
+    private monsterType: MonsterType = 'bat';
+
+    // Knockback system for aggressive monsters
+    private knockbackX: number = 0;
+    private knockbackY: number = 0;
+    private knockbackUntil: number = 0;
+
+    // Dash system for fast monsters
+    private isDashing: boolean = false;
+    private lastDashAt: number = 0;
+    private dashDirectionX: number = 0;
+    private dashDirectionY: number = 0;
+
+    // Movement variation for jerky movement
+    private movementVariation: number = 0;
+    private lastMovementChange: number = Date.now();
+
     // Init
-    constructor(x: number, y: number, radius: number, mapWidth: number, mapHeight: number, lives: number) {
+    constructor(x: number, y: number, radius: number, mapWidth: number, mapHeight: number, lives: number, monsterType?: MonsterType) {
         super(x, y, radius);
 
         this.mapWidth = mapWidth;
         this.mapHeight = mapHeight;
         this.lives = lives;
+        this.monsterType = monsterType || 'bat';
     }
 
     // Update
     update(players: MapSchema<Player>) {
+        // Handle knockback for aggressive monsters
+        this.updateKnockback();
+
+        // Handle dash for fast monsters
+        this.updateDash();
+
         switch (this.state) {
             case 'idle':
                 this.updateIdle(players);
@@ -80,8 +117,10 @@ export class Monster extends Circle {
             return;
         }
 
-        // Move monster
-        this.move(Constants.MONSTER_SPEED_PATROL, this.rotation);
+        // Move monster with jerky movement
+        const speed = this.getPatrolSpeed();
+        const jerkyMultiplier = this.getJerkyMovementMultiplier();
+        this.move(speed * jerkyMultiplier, this.rotation);
 
         // Is the monster out of bounds?
         if (
@@ -111,9 +150,113 @@ export class Monster extends Circle {
             return;
         }
 
-        // Move toward player
+        // Move toward player based on monster type
         this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-        this.move(Constants.MONSTER_SPEED_CHASE, this.rotation);
+
+        const speed = this.getChaseSpeed();
+        const jerkyMultiplier = this.getJerkyMovementMultiplier();
+
+        this.move(speed * jerkyMultiplier, this.rotation);
+
+        // Fast monsters can dash
+        if (this.monsterType === 'fast' && this.canDash()) {
+            this.startDash(player.x, player.y);
+        }
+    }
+
+    // New monster mechanics
+    private updateKnockback() {
+        if (Date.now() < this.knockbackUntil) {
+            this.x += this.knockbackX;
+            this.y += this.knockbackY;
+
+            // Gradually reduce knockback force
+            this.knockbackX *= 0.85;
+            this.knockbackY *= 0.85;
+        } else {
+            this.knockbackX = 0;
+            this.knockbackY = 0;
+        }
+    }
+
+    private updateDash() {
+        if (this.isDashing) {
+            this.x += this.dashDirectionX;
+            this.y += this.dashDirectionY;
+
+            // Gradually reduce dash force
+            this.dashDirectionX *= 0.9;
+            this.dashDirectionY *= 0.9;
+
+            // Stop dash if force is too low
+            if (Math.abs(this.dashDirectionX) < 0.1 && Math.abs(this.dashDirectionY) < 0.1) {
+                this.isDashing = false;
+            }
+        }
+    }
+
+    private getChaseSpeed(): number {
+        switch (this.monsterType) {
+            case 'aggressive':
+                return Constants.MONSTER_AGGRESSIVE_SPEED_CHASE;
+            case 'fast':
+                return Constants.MONSTER_FAST_SPEED_CHASE;
+            default:
+                return Constants.MONSTER_SPEED_CHASE;
+        }
+    }
+
+    private getPatrolSpeed(): number {
+        switch (this.monsterType) {
+            case 'aggressive':
+                return Constants.MONSTER_AGGRESSIVE_SPEED_PATROL;
+            case 'fast':
+                return Constants.MONSTER_FAST_SPEED_PATROL;
+            default:
+                return Constants.MONSTER_SPEED_PATROL;
+        }
+    }
+
+    private getAttackCooldown(): number {
+        switch (this.monsterType) {
+            case 'aggressive':
+                return Constants.MONSTER_AGGRESSIVE_ATTACK_BACKOFF;
+            case 'fast':
+                return Constants.MONSTER_FAST_ATTACK_BACKOFF;
+            default:
+                return Constants.MONSTER_ATTACK_BACKOFF;
+        }
+    }
+
+    private getJerkyMovementMultiplier(): number {
+        // Change movement variation every 200-500ms for jerky effect
+        if (Date.now() - this.lastMovementChange > Maths.getRandomInt(200, 500)) {
+            this.movementVariation = Maths.getRandomInt(70, 130) / 100; // 0.7 to 1.3
+            this.lastMovementChange = Date.now();
+        }
+        return this.movementVariation;
+    }
+
+    private canDash(): boolean {
+        return !this.isDashing && Date.now() - this.lastDashAt > Constants.MONSTER_FAST_DASH_COOLDOWN;
+    }
+
+    private startDash(targetX: number, targetY: number) {
+        this.isDashing = true;
+        this.lastDashAt = Date.now();
+
+        const angle = Maths.calculateAngle(targetX, targetY, this.x, this.y);
+        this.dashDirectionX = Math.cos(angle) * Constants.MONSTER_FAST_DASH_FORCE;
+        this.dashDirectionY = Math.sin(angle) * Constants.MONSTER_FAST_DASH_FORCE;
+    }
+
+    public applyKnockback(fromX: number, fromY: number) {
+        if (this.monsterType === 'aggressive') {
+            const angle = Maths.calculateAngle(fromX, fromY, this.x, this.y);
+            this.knockbackX = Math.cos(angle) * Constants.MONSTER_AGGRESSIVE_KNOCKBACK_FORCE;
+            this.knockbackY = Math.sin(angle) * Constants.MONSTER_AGGRESSIVE_KNOCKBACK_FORCE;
+            this.knockbackUntil = Date.now() + Constants.MONSTER_AGGRESSIVE_KNOCKBACK_DURATION;
+        }
     }
 
     // States
@@ -137,6 +280,7 @@ export class Monster extends Circle {
         );
         this.rotation = Maths.getRandomInt(-3, 3);
         this.lastActionAt = Date.now();
+        this.isDashing = false; // Reset dash state
     }
 
     startChase(playerId: string) {
@@ -178,7 +322,24 @@ export class Monster extends Circle {
 
     get canAttack(): boolean {
         const delta = Math.abs(this.lastAttackAt - Date.now());
-        return this.state === 'chase' && delta > Constants.MONSTER_ATTACK_BACKOFF;
+        return this.state === 'chase' && delta > this.getAttackCooldown() && !this.isDashing;
+    }
+
+    // New getters for client synchronization
+    get type(): MonsterType {
+        return this.monsterType;
+    }
+
+    get knockbackXValue(): number {
+        return this.knockbackX;
+    }
+
+    get knockbackYValue(): number {
+        return this.knockbackY;
+    }
+
+    get isCurrentlyDashing(): boolean {
+        return this.isDashing;
     }
 }
 
