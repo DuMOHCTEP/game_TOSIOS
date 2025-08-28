@@ -138,6 +138,8 @@ export class Monster extends BaseEntity {
         // Add dash visual effect
         if (this._isDashing) {
             this.sprite.alpha = 0.7; // Semi-transparent during dash
+        } else if (Date.now() < this._cooldownUntil) {
+            this.sprite.alpha = 0.8; // Slightly transparent during cooldown
         } else {
             this.sprite.alpha = 1.0; // Normal opacity
         }

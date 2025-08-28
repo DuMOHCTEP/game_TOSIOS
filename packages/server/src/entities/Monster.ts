@@ -189,13 +189,32 @@ export class Monster extends Circle {
             return;
         }
 
-        // Stay near the attack position
-        const distanceFromAttackPos = Maths.getDistance(this.x, this.y, this.attackPositionX, this.attackPositionY);
+        // Get current target player
+        const player = getPlayerFromId(this.targetPlayerId, players);
+        if (player && player.isAlive) {
+            const distanceToPlayer = Maths.getDistance(this.x, this.y, player.x, player.y);
 
-        // If too far from attack position, slowly move back
-        if (distanceFromAttackPos > 50) { // Max distance from attack position
-            const angle = Maths.calculateAngle(this.attackPositionX, this.attackPositionY, this.x, this.y);
-            this.move(0.5, angle); // Slow movement back to attack position
+            // If too close to player (less than 150px), move away
+            if (distanceToPlayer < Constants.MONSTER_ATTACK_MIN_DISTANCE) {
+                const angle = Maths.calculateAngle(player.x, player.y, this.x, this.y); // Away from player
+                this.move(1.0, angle); // Move away at normal speed
+                return;
+            }
+
+            // If too far from attack position, slowly move back toward attack position
+            const distanceFromAttackPos = Maths.getDistance(this.x, this.y, this.attackPositionX, this.attackPositionY);
+            if (distanceFromAttackPos > 80) { // Allow some movement around attack position
+                const angle = Maths.calculateAngle(this.attackPositionX, this.attackPositionY, this.x, this.y);
+                this.move(0.3, angle); // Very slow movement back to attack position
+                return;
+            }
+        }
+
+        // Stay in place or move slightly around attack position
+        // Small random movement to avoid being completely static
+        if (Math.random() < 0.02) { // 2% chance per update
+            const randomAngle = Math.random() * Math.PI * 2;
+            this.move(0.1, randomAngle);
         }
 
         // Continue looking for players but don't chase aggressively
@@ -291,25 +310,35 @@ export class Monster extends Circle {
         this.dashDirectionY = Math.sin(angle) * Constants.MONSTER_FAST_DASH_FORCE;
     }
 
-    public applyKnockback(fromX: number, fromY: number) {
+    public applyKnockback(fromX: number, fromY: number, isAttackKnockback: boolean = false) {
         const angle = Maths.calculateAngle(fromX, fromY, this.x, this.y);
 
-        // Different knockback forces for different monster types
-        let knockbackForce = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_FORCE;
-        let knockbackDuration = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_DURATION;
+        let knockbackForce: number;
+        let knockbackDuration: number;
 
-        switch (this.monsterType) {
-            case 'bat':
-                knockbackForce = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_FORCE * 0.7; // Slightly less for basic bats
-                knockbackDuration = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_DURATION * 0.8;
-                break;
-            case 'aggressive':
-                // Full knockback force for aggressive monsters
-                break;
-            case 'fast':
-                knockbackForce = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_FORCE * 0.5; // Less for fast monsters
-                knockbackDuration = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_DURATION * 0.6;
-                break;
+        if (isAttackKnockback) {
+            // Stronger knockback for attack to reach 150px distance
+            knockbackForce = Constants.MONSTER_ATTACK_KNOCKBACK_FORCE;
+            knockbackDuration = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_DURATION;
+        } else {
+            // Regular knockback (for collisions or other effects)
+            knockbackForce = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_FORCE;
+            knockbackDuration = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_DURATION;
+
+            // Adjust based on monster type for regular knockback
+            switch (this.monsterType) {
+                case 'bat':
+                    knockbackForce *= 0.7;
+                    knockbackDuration *= 0.8;
+                    break;
+                case 'aggressive':
+                    // Full knockback force for aggressive monsters
+                    break;
+                case 'fast':
+                    knockbackForce *= 0.5;
+                    knockbackDuration *= 0.6;
+                    break;
+            }
         }
 
         this.knockbackX = Math.cos(angle) * knockbackForce;

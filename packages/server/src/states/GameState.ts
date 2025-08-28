@@ -449,8 +449,8 @@ export class GameState extends Schema {
             monster.attack(player.x, player.y);
             player.hurt();
 
-            // Apply knockback to ALL monsters when they hit a player
-            monster.applyKnockback(player.x, player.y);
+            // Apply strong knockback to push monster 150px away from player
+            monster.applyKnockback(player.x, player.y, true);
 
             const monsterName = monster.type === 'bat' ? 'A bat' :
                                monster.type === 'aggressive' ? 'An aggressive monster' :
