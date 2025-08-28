@@ -449,10 +449,8 @@ export class GameState extends Schema {
             monster.attack();
             player.hurt();
 
-            // Apply knockback to aggressive monsters
-            if (monster.type === 'aggressive') {
-                monster.applyKnockback(player.x, player.y);
-            }
+            // Apply knockback to ALL monsters when they hit a player
+            monster.applyKnockback(player.x, player.y);
 
             const monsterName = monster.type === 'bat' ? 'A bat' :
                                monster.type === 'aggressive' ? 'An aggressive monster' :

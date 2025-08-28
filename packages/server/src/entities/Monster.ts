@@ -251,12 +251,29 @@ export class Monster extends Circle {
     }
 
     public applyKnockback(fromX: number, fromY: number) {
-        if (this.monsterType === 'aggressive') {
-            const angle = Maths.calculateAngle(fromX, fromY, this.x, this.y);
-            this.knockbackX = Math.cos(angle) * Constants.MONSTER_AGGRESSIVE_KNOCKBACK_FORCE;
-            this.knockbackY = Math.sin(angle) * Constants.MONSTER_AGGRESSIVE_KNOCKBACK_FORCE;
-            this.knockbackUntil = Date.now() + Constants.MONSTER_AGGRESSIVE_KNOCKBACK_DURATION;
+        const angle = Maths.calculateAngle(fromX, fromY, this.x, this.y);
+
+        // Different knockback forces for different monster types
+        let knockbackForce = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_FORCE;
+        let knockbackDuration = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_DURATION;
+
+        switch (this.monsterType) {
+            case 'bat':
+                knockbackForce = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_FORCE * 0.7; // Slightly less for basic bats
+                knockbackDuration = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_DURATION * 0.8;
+                break;
+            case 'aggressive':
+                // Full knockback force for aggressive monsters
+                break;
+            case 'fast':
+                knockbackForce = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_FORCE * 0.5; // Less for fast monsters
+                knockbackDuration = Constants.MONSTER_AGGRESSIVE_KNOCKBACK_DURATION * 0.6;
+                break;
         }
+
+        this.knockbackX = Math.cos(angle) * knockbackForce;
+        this.knockbackY = Math.sin(angle) * knockbackForce;
+        this.knockbackUntil = Date.now() + knockbackDuration;
     }
 
     // States
