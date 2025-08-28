@@ -133,6 +133,9 @@ export class Monster extends BaseEntity {
             baseTint = this.adjustTintForCooldown(baseTint);
         }
 
+        // Add AI behavior visual indicators
+        baseTint = this.adjustTintForAIBehavior(baseTint);
+
         this.sprite.tint = baseTint;
 
         // Add dash visual effect
@@ -142,6 +145,51 @@ export class Monster extends BaseEntity {
             this.sprite.alpha = 0.8; // Slightly transparent during cooldown
         } else {
             this.sprite.alpha = 1.0; // Normal opacity
+        }
+
+        // Add scale effects for different behaviors
+        this.updateScaleEffects();
+    }
+
+    private adjustTintForAIBehavior(baseTint: number): number {
+        // Add subtle tint variations based on monster behavior
+        const time = Date.now() * 0.001; // Convert to seconds
+
+        switch (this._monsterType) {
+            case 'aggressive':
+                // Pulsing red tint when aggressive
+                const aggressivePulse = Math.sin(time * 3) * 0.1 + 0.9;
+                return this.multiplyTint(baseTint, aggressivePulse);
+            case 'fast':
+                // Blue tint with slight variation
+                const fastVariation = Math.sin(time * 5) * 0.05 + 0.95;
+                return this.multiplyTint(baseTint, fastVariation);
+            default:
+                return baseTint;
+        }
+    }
+
+    private multiplyTint(baseTint: number, multiplier: number): number {
+        const r = Math.min(255, Math.floor(((baseTint >> 16) & 0xff) * multiplier));
+        const g = Math.min(255, Math.floor(((baseTint >> 8) & 0xff) * multiplier));
+        const b = Math.min(255, Math.floor((baseTint & 0xff) * multiplier));
+        return (r << 16) | (g << 8) | b;
+    }
+
+    private updateScaleEffects() {
+        const time = Date.now() * 0.001;
+
+        if (this._monsterType === 'fast' && Date.now() < this._cooldownUntil) {
+            // Fast monsters have subtle scale pulsing during cooldown
+            const scalePulse = 1.0 + Math.sin(time * 8) * 0.05;
+            this.sprite.scale.set(scalePulse, scalePulse);
+        } else if (this._monsterType === 'aggressive' && Math.abs(this._knockbackX) > 0.1) {
+            // Aggressive monsters squash during knockback
+            const squashScale = 0.9 + Math.sin(time * 10) * 0.1;
+            this.sprite.scale.set(1.1, squashScale);
+        } else {
+            // Normal scale
+            this.sprite.scale.set(1.0, 1.0);
         }
     }
 
