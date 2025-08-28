@@ -29,6 +29,12 @@ export class Monster extends BaseEntity {
 
     private _isDashing: boolean = false;
 
+    private _cooldownUntil: number = 0;
+
+    private _attackPositionX: number = 0;
+
+    private _attackPositionY: number = 0;
+
     // Init
     constructor(monster: Models.MonsterJSON) {
         super({
@@ -43,6 +49,9 @@ export class Monster extends BaseEntity {
         this._knockbackX = monster.knockbackX;
         this._knockbackY = monster.knockbackY;
         this._isDashing = monster.isDashing;
+        this._cooldownUntil = monster.cooldownUntil;
+        this._attackPositionX = monster.attackPositionX;
+        this._attackPositionY = monster.attackPositionY;
 
         // Apply color tint based on monster type
         this.applyMonsterTint();
@@ -77,6 +86,9 @@ export class Monster extends BaseEntity {
         this._knockbackX = monster.knockbackX;
         this._knockbackY = monster.knockbackY;
         this._isDashing = monster.isDashing;
+        this._cooldownUntil = monster.cooldownUntil;
+        this._attackPositionX = monster.attackPositionX;
+        this._attackPositionY = monster.attackPositionY;
 
         // Reapply base tint if monster type changed
         if (typeChanged) {
@@ -115,6 +127,12 @@ export class Monster extends BaseEntity {
             baseTint = this.adjustTintForKnockback(baseTint);
         }
 
+        // Add cooldown visual effect
+        if (Date.now() < this._cooldownUntil) {
+            // Make the tint darker during cooldown to show "recovery" state
+            baseTint = this.adjustTintForCooldown(baseTint);
+        }
+
         this.sprite.tint = baseTint;
 
         // Add dash visual effect
@@ -143,6 +161,14 @@ export class Monster extends BaseEntity {
         const r = Math.min(255, ((baseTint >> 16) & 0xff) + 64);
         const g = Math.min(255, ((baseTint >> 8) & 0xff) + 64);
         const b = Math.min(255, (baseTint & 0xff) + 64);
+        return (r << 16) | (g << 8) | b;
+    }
+
+    private adjustTintForCooldown(baseTint: number): number {
+        // Make the tint darker during cooldown by reducing RGB values
+        const r = Math.max(0, ((baseTint >> 16) & 0xff) - 64);
+        const g = Math.max(0, ((baseTint >> 8) & 0xff) - 64);
+        const b = Math.max(0, (baseTint & 0xff) - 64);
         return (r << 16) | (g << 8) | b;
     }
 
@@ -210,6 +236,18 @@ export class Monster extends BaseEntity {
 
     get isDashing(): boolean {
         return this._isDashing;
+    }
+
+    get cooldownUntil(): number {
+        return this._cooldownUntil;
+    }
+
+    get attackPositionX(): number {
+        return this._attackPositionX;
+    }
+
+    get attackPositionY(): number {
+        return this._attackPositionY;
     }
 }
 

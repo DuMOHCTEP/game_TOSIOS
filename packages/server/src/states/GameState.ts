@@ -446,7 +446,7 @@ export class GameState extends Schema {
                 return;
             }
 
-            monster.attack();
+            monster.attack(player.x, player.y);
             player.hurt();
 
             // Apply knockback to ALL monsters when they hit a player

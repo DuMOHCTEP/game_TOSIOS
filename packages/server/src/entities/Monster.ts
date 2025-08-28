@@ -3,7 +3,7 @@ import { MapSchema, type } from '@colyseus/schema';
 import { Circle } from './Circle';
 import { Player } from '.';
 
-type MonsterState = 'idle' | 'patrol' | 'chase';
+type MonsterState = 'idle' | 'patrol' | 'chase' | 'cooldown';
 
 export class Monster extends Circle {
     @type('number')
@@ -20,6 +20,15 @@ export class Monster extends Circle {
 
     @type('boolean')
     private isDashing: boolean = false;
+
+    @type('number')
+    private cooldownUntil: number = 0;
+
+    @type('number')
+    private attackPositionX: number = 0;
+
+    @type('number')
+    private attackPositionY: number = 0;
 
     // Hidden properties
     private mapWidth: number;
@@ -58,6 +67,11 @@ export class Monster extends Circle {
     private movementVariation: number = 0;
     private lastMovementChange: number = Date.now();
 
+    // Cooldown state tracking
+    private cooldownUntil: number = 0;
+    private attackPositionX: number = 0;
+    private attackPositionY: number = 0;
+
     // Init
     constructor(x: number, y: number, radius: number, mapWidth: number, mapHeight: number, lives: number, monsterType?: MonsterType) {
         super(x, y, radius);
@@ -85,6 +99,9 @@ export class Monster extends Circle {
                 break;
             case 'chase':
                 this.updateChase(players);
+                break;
+            case 'cooldown':
+                this.updateCooldown(players);
                 break;
             default:
                 break;
@@ -161,6 +178,30 @@ export class Monster extends Circle {
         // Fast monsters can dash
         if (this.monsterType === 'fast' && this.canDash()) {
             this.startDash(player.x, player.y);
+        }
+    }
+
+    updateCooldown(players: MapSchema<Player>) {
+        // Check if cooldown is over
+        if (Date.now() >= this.cooldownUntil) {
+            // Cooldown finished, return to chase state
+            this.startChase(this.targetPlayerId);
+            return;
+        }
+
+        // Stay near the attack position
+        const distanceFromAttackPos = Maths.getDistance(this.x, this.y, this.attackPositionX, this.attackPositionY);
+
+        // If too far from attack position, slowly move back
+        if (distanceFromAttackPos > 50) { // Max distance from attack position
+            const angle = Maths.calculateAngle(this.attackPositionX, this.attackPositionY, this.x, this.y);
+            this.move(0.5, angle); // Slow movement back to attack position
+        }
+
+        // Continue looking for players but don't chase aggressively
+        if (this.lookForPlayer(players)) {
+            // If found a closer player, might switch targets after cooldown
+            return;
         }
     }
 
@@ -306,6 +347,15 @@ export class Monster extends Circle {
         this.lastActionAt = Date.now();
     }
 
+    startCooldown(playerId: string, attackX: number, attackY: number) {
+        this.state = 'cooldown';
+        this.targetPlayerId = playerId;
+        this.attackPositionX = attackX;
+        this.attackPositionY = attackY;
+        this.cooldownUntil = Date.now() + this.getAttackCooldown();
+        this.lastActionAt = Date.now();
+    }
+
     // Methods
     lookForPlayer(players: MapSchema<Player>): boolean {
         if (!this.targetPlayerId) {
@@ -328,8 +378,10 @@ export class Monster extends Circle {
         this.y += Math.sin(rotation) * speed;
     }
 
-    attack() {
+    attack(playerX: number, playerY: number) {
         this.lastAttackAt = Date.now();
+        // Start cooldown state after attack
+        this.startCooldown(this.targetPlayerId, playerX, playerY);
     }
 
     // Getters
@@ -339,7 +391,7 @@ export class Monster extends Circle {
 
     get canAttack(): boolean {
         const delta = Math.abs(this.lastAttackAt - Date.now());
-        return this.state === 'chase' && delta > this.getAttackCooldown() && !this.isDashing;
+        return this.state === 'chase' && delta > this.getAttackCooldown() && !this.isDashing && Date.now() >= this.cooldownUntil;
     }
 
     // New getters for client synchronization

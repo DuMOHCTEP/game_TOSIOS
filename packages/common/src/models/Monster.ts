@@ -9,4 +9,7 @@ export interface MonsterJSON {
     knockbackX: number;
     knockbackY: number;
     isDashing: boolean;
+    cooldownUntil: number;
+    attackPositionX: number;
+    attackPositionY: number;
 }
