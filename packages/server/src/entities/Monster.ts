@@ -168,8 +168,14 @@ export class Monster extends Circle {
             return;
         }
 
-        // AI Behavior based on monster type and distance
-        this.executeSmartChaseAI(player, distance);
+        // Simple chase behavior - just go towards the player
+        // No distance restrictions during normal chase
+        this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+
+        const speed = this.getChaseSpeed();
+        const jerkyMultiplier = this.getJerkyMovementMultiplier();
+
+        this.move(speed * jerkyMultiplier, this.rotation);
 
         // Fast monsters can dash when close enough
         if (this.monsterType === 'fast' && this.canDash() && distance < 100) {
@@ -177,90 +183,7 @@ export class Monster extends Circle {
         }
     }
 
-    private executeSmartChaseAI(player: Player, distance: number) {
-        const minDistance = Constants.MONSTER_ATTACK_MIN_DISTANCE;
-        const speed = this.getChaseSpeed();
-        const jerkyMultiplier = this.getJerkyMovementMultiplier();
 
-        switch (this.monsterType) {
-            case 'bat':
-                // Basic bat: simple approach but maintains distance
-                this.executeBasicChase(player, distance, minDistance, speed * jerkyMultiplier);
-                break;
-
-            case 'aggressive':
-                // Aggressive: tries to get close but respects minimum distance
-                this.executeAggressiveChase(player, distance, minDistance, speed * jerkyMultiplier);
-                break;
-
-            case 'fast':
-                // Fast: circles around player, makes quick dashes
-                this.executeFastChase(player, distance, minDistance, speed * jerkyMultiplier);
-                break;
-
-            default:
-                this.executeBasicChase(player, distance, minDistance, speed * jerkyMultiplier);
-                break;
-        }
-    }
-
-    private executeBasicChase(player: Player, distance: number, minDistance: number, moveSpeed: number) {
-        if (distance > minDistance + 20) {
-            // Move toward player but stop at safe distance
-            this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            this.move(moveSpeed, this.rotation);
-        } else if (distance < minDistance - 10) {
-            // Too close, move away slightly
-            this.rotation = Maths.calculateAngle(this.x, this.y, player.x, player.y);
-            this.move(moveSpeed * 0.5, this.rotation);
-        }
-        // If at optimal distance, don't move (or small random movement)
-    }
-
-    private executeAggressiveChase(player: Player, distance: number, minDistance: number, moveSpeed: number) {
-        if (distance > minDistance + 30) {
-            // Aggressive approach - faster when far
-            this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            this.move(moveSpeed * 1.2, this.rotation);
-        } else if (distance > minDistance) {
-            // Slow approach when getting close
-            this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            this.move(moveSpeed * 0.3, this.rotation);
-        } else if (distance < minDistance - 5) {
-            // Emergency retreat if too close
-            this.rotation = Maths.calculateAngle(this.x, this.y, player.x, player.y);
-            this.move(moveSpeed * 0.8, this.rotation);
-        }
-        // Small circling movement when at optimal distance
-        else if (Math.random() < 0.05) {
-            const circleAngle = Math.random() * Math.PI * 2;
-            this.move(moveSpeed * 0.1, circleAngle);
-        }
-    }
-
-    private executeFastChase(player: Player, distance: number, minDistance: number, moveSpeed: number) {
-        if (distance > minDistance + 50) {
-            // Fast approach when far
-            this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            this.move(moveSpeed, this.rotation);
-        } else if (distance > minDistance + 20) {
-            // Circling behavior when medium distance
-            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const circleOffset = Math.sin(Date.now() * 0.01) * 0.5; // Circular motion
-            this.rotation = angleToPlayer + circleOffset;
-            this.move(moveSpeed * 0.7, this.rotation);
-        } else if (distance > minDistance) {
-            // Slow circling when at optimal distance
-            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const circleOffset = Math.sin(Date.now() * 0.005) * 0.3; // Slower circular motion
-            this.rotation = angleToPlayer + circleOffset;
-            this.move(moveSpeed * 0.2, this.rotation);
-        } else if (distance < minDistance - 10) {
-            // Quick retreat if too close
-            this.rotation = Maths.calculateAngle(this.x, this.y, player.x, player.y);
-            this.move(moveSpeed * 1.5, this.rotation);
-        }
-    }
 
     updateCooldown(players: MapSchema<Player>) {
         // Check if cooldown is over
@@ -276,91 +199,34 @@ export class Monster extends Circle {
             const distanceToPlayer = Maths.getDistance(this.x, this.y, player.x, player.y);
             const minDistance = Constants.MONSTER_ATTACK_MIN_DISTANCE;
 
-            // CRITICAL: Always maintain minimum distance during cooldown
+            // Maintain minimum distance during cooldown - don't get closer than 50px
             if (distanceToPlayer < minDistance) {
-                // Emergency retreat - move away from player immediately
+                // Move away from player to maintain distance
                 const angle = Maths.calculateAngle(player.x, player.y, this.x, this.y); // Away from player
                 const retreatSpeed = this.monsterType === 'fast' ? 2.0 : 1.5;
                 this.move(retreatSpeed, angle);
                 return;
             }
 
-            // AI behavior during cooldown based on monster type
-            this.executeCooldownAI(player, distanceToPlayer, minDistance);
-        } else {
-            // Player disconnected/died, stay near attack position
-            this.stayNearAttackPosition();
-        }
-    }
+            // If player moved far away, slowly follow but keep safe distance
+            if (distanceToPlayer > minDistance + 100) {
+                const angle = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+                this.move(0.5, angle);
+                return;
+            }
 
-    private executeCooldownAI(player: Player, distanceToPlayer: number, minDistance: number) {
-        switch (this.monsterType) {
-            case 'bat':
-                this.executeBasicCooldown(player, distanceToPlayer, minDistance);
-                break;
-            case 'aggressive':
-                this.executeAggressiveCooldown(player, distanceToPlayer, minDistance);
-                break;
-            case 'fast':
-                this.executeFastCooldown(player, distanceToPlayer, minDistance);
-                break;
-            default:
-                this.executeBasicCooldown(player, distanceToPlayer, minDistance);
-                break;
-        }
-    }
-
-    private executeBasicCooldown(player: Player, distanceToPlayer: number, minDistance: number) {
-        const distanceFromAttackPos = Maths.getDistance(this.x, this.y, this.attackPositionX, this.attackPositionY);
-
-        // Stay within reasonable distance from attack position
-        if (distanceFromAttackPos > 60) {
-            const angle = Maths.calculateAngle(this.attackPositionX, this.attackPositionY, this.x, this.y);
-            this.move(0.4, angle);
-        } else {
-            // Small random movement around attack position
-            if (Math.random() < 0.03) {
+            // Stay at current position or small random movement
+            if (Math.random() < 0.02) {
                 const randomAngle = Math.random() * Math.PI * 2;
                 this.move(0.1, randomAngle);
             }
-        }
-    }
-
-    private executeAggressiveCooldown(player: Player, distanceToPlayer: number, minDistance: number) {
-        // Aggressive monsters are more active during cooldown
-        if (distanceToPlayer > minDistance + 40) {
-            // If player moved away, slowly follow but keep distance
-            const angle = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            this.move(0.3, angle);
-        } else if (distanceToPlayer > minDistance + 10) {
-            // Small circling around optimal distance
-            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const circleOffset = Math.sin(Date.now() * 0.008) * 0.2;
-            this.move(0.2, angleToPlayer + circleOffset);
-        }
-    }
-
-    private executeFastCooldown(player: Player, distanceToPlayer: number, minDistance: number) {
-        // Fast monsters are more erratic during cooldown
-        if (distanceToPlayer > minDistance + 50) {
-            // Quick repositioning if player moved far
-            const angle = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            this.move(0.6, angle);
         } else {
-            // Erratic movement around safe distance
-            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const erraticOffset = Math.sin(Date.now() * 0.02) * 0.3; // Faster erratic motion
-            const verticalOffset = Math.cos(Date.now() * 0.015) * 0.2;
-            this.move(0.1, angleToPlayer + erraticOffset + verticalOffset);
-        }
-    }
-
-    private stayNearAttackPosition() {
-        const distanceFromAttackPos = Maths.getDistance(this.x, this.y, this.attackPositionX, this.attackPositionY);
-
-        if (distanceFromAttackPos > 40) {
-            const angle = Maths.calculateAngle(this.attackPositionX, this.attackPositionY, this.x, this.y);
-            this.move(0.2, angle);
+            // Player disconnected/died, stay near attack position
+            const distanceFromAttackPos = Maths.getDistance(this.x, this.y, this.attackPositionX, this.attackPositionY);
+            if (distanceFromAttackPos > 30) {
+                const angle = Maths.calculateAngle(this.attackPositionX, this.attackPositionY, this.x, this.y);
+                this.move(0.3, angle);
+            }
         }
     }
 
