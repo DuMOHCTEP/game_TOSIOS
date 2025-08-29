@@ -6,7 +6,7 @@ import { GUITextures } from './assets/images';
 import { SpriteSheets } from './assets/images/maps';
 import { ImpactConfig, ImpactTexture } from './assets/particles';
 import { Monster, Player, Prop } from './entities';
-import { BulletsManager, MonstersManager, PlayersManager, PropsManager } from './managers';
+import { BulletsManager, LightingManager, MonstersManager, PlayersManager, PropsManager } from './managers';
 import { distanceBetween } from './utils/distance';
 import { Inputs } from './utils/inputs';
 import { getSpritesLayer, getTexturesSet } from './utils/tiled';
@@ -70,9 +70,7 @@ export class Game {
     private bulletsManager: BulletsManager;
 
     // Lighting System
-    private lightingContainer: Container;
-    private darknessLayer: Graphics;
-    private lightMask: Graphics;
+    private lightingManager: LightingManager;
 
     // Collisions
     private walls: Collisions.TreeCollider;
@@ -100,12 +98,12 @@ export class Game {
 
     // LIFECYCLE
     constructor(screenWidth: number, screenHeight: number, onActionSend: any) {
-        // App
+        // App - темный фон для атмосферы подземелья
         this.app = new Application({
             width: screenWidth,
             height: screenHeight,
             antialias: false,
-            backgroundColor: utils.string2hex(Constants.BACKGROUND_COLOR),
+            backgroundColor: 0x0a0a0a, // Очень темный фон вместо обычного
             autoDensity: true,
             resolution: window.devicePixelRatio,
         });
@@ -154,7 +152,10 @@ export class Game {
         this.viewport.addChild(this.bulletsManager);
 
         // Lighting System (Dungeon Atmosphere)
-        this.initLightingSystem();
+        this.lightingManager = new LightingManager();
+        this.lightingManager.setEnabled(Constants.LIGHTING_ENABLED);
+        this.lightingManager.getContainer().zIndex = ZINDEXES.LIGHTING;
+        this.viewport.addChild(this.lightingManager.getContainer());
 
         // Viewport
         this.viewport.zoomPercent(utils.isMobile.any ? 0.25 : 1.0);
@@ -165,57 +166,16 @@ export class Game {
     }
 
     // LIGHTING SYSTEM
-    private initLightingSystem = () => {
-        if (!Constants.LIGHTING_ENABLED) return;
-
-        // Create lighting container
-        this.lightingContainer = new Container();
-        this.lightingContainer.zIndex = ZINDEXES.LIGHTING; // Above everything else
-        this.viewport.addChild(this.lightingContainer);
-
-        // Create darkness layer (full screen dark overlay)
-        this.darknessLayer = new Graphics();
-        this.darknessLayer.beginFill(0x000000, Constants.DARKNESS_ALPHA);
-        this.darknessLayer.drawRect(0, 0, this.app.screen.width, this.app.screen.height);
-        this.darknessLayer.endFill();
-        this.lightingContainer.addChild(this.darknessLayer);
-
-        // Create light mask (circular light around player)
-        this.lightMask = new Graphics();
-        this.lightingContainer.addChild(this.lightMask);
-
-        // Set the darkness layer to use the light mask
-        this.darknessLayer.mask = this.lightMask;
-
-        console.log('🏮 Dungeon lighting system initialized');
-    };
-
-    private updateLighting = () => {
-        if (!Constants.LIGHTING_ENABLED || !this.me) return;
+    private updateLightingSystem = () => {
+        if (!Constants.LIGHTING_ENABLED || !this.me || !this.lightingManager) return;
 
         const playerX = this.me.x;
         const playerY = this.me.y;
-        const playerLightRadius = Constants.PLAYER_LIGHT_RADIUS;
 
-        // Clear previous light mask
-        this.lightMask.clear();
+        // Update player light position
+        this.lightingManager.updatePlayerLight(playerX, playerY, this.app.screen.width, this.app.screen.height);
 
-        // Start with ambient light level
-        this.lightMask.beginFill(0xffffff, Constants.AMBIENT_LIGHT_LEVEL);
-        this.lightMask.drawRect(-10000, -10000, 20000, 20000); // Large rectangle for ambient light
-        this.lightMask.endFill();
-
-        // Player's main light circle
-        this.lightMask.beginFill(0xffffff, Constants.LIGHT_INTENSITY);
-        this.lightMask.drawCircle(playerX, playerY, playerLightRadius);
-        this.lightMask.endFill();
-
-        // Bright center for player
-        this.lightMask.beginFill(0xffffff, 1.0);
-        this.lightMask.drawCircle(playerX, playerY, playerLightRadius * 0.3);
-        this.lightMask.endFill();
-
-        // Add lights for nearby monsters (smaller radius)
+        // Add monster lights
         const monsters = this.monstersManager.children as any[];
         monsters.forEach((monster: any) => {
             if (monster && monster.x !== undefined && monster.y !== undefined) {
@@ -224,20 +184,11 @@ export class Game {
                 );
 
                 // Only add monster light if it's close enough to be visible
-                if (distanceToPlayer <= playerLightRadius + Constants.MONSTER_LIGHT_RADIUS) {
-                    const monsterLightRadius = Constants.MONSTER_LIGHT_RADIUS;
-                    const lightIntensity = Math.max(0.2, 1.0 - (distanceToPlayer / (playerLightRadius + monsterLightRadius)));
-
-                    this.lightMask.beginFill(0xffaa00, lightIntensity * 0.5); // Orange-ish monster light
-                    this.lightMask.drawCircle(monster.x, monster.y, monsterLightRadius * 0.5);
-                    this.lightMask.endFill();
+                if (distanceToPlayer <= Constants.PLAYER_LIGHT_RADIUS + Constants.MONSTER_LIGHT_RADIUS) {
+                    this.lightingManager.addMonsterLight(monster.x, monster.y, distanceToPlayer);
                 }
             }
         });
-
-        // Update darkness layer to follow player
-        this.darknessLayer.x = -playerX + this.app.screen.width / 2;
-        this.darknessLayer.y = -playerY + this.app.screen.height / 2;
     };
 
     start = (renderView: any) => {
@@ -252,7 +203,7 @@ export class Game {
         this.updatePlayers();
         this.updateMonsters();
         this.updateBullets();
-        this.updateLighting();
+        this.updateLightingSystem();
 
         this.playersManager.sortChildren();
     };
@@ -766,6 +717,11 @@ export class Game {
     bulletAdd = (bulletId: string, attributes: Models.BulletJSON) => {
         if ((this.me && this.me.playerId === attributes.playerId) || !attributes.active) {
             return;
+        }
+
+        // Add flash light effect for new bullets (dungeon atmosphere)
+        if (Constants.LIGHTING_ENABLED && this.lightingManager) {
+            this.lightingManager.addFlashLight(attributes.x, attributes.y);
         }
 
         this.bulletsManager.addOrCreate(attributes, this.particlesContainer);

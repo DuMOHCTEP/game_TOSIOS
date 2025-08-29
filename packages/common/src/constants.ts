@@ -24,12 +24,21 @@ export const BACKGROUND_COLOR = '#25131A';
 
 // Lighting System (Dungeon Atmosphere) - Set to false to disable dungeon lighting
 export const LIGHTING_ENABLED = true;
-export const PLAYER_LIGHT_RADIUS = 150; // pixels - how far player can see
-export const MONSTER_LIGHT_RADIUS = 120; // pixels - monster visibility radius
-export const LIGHT_FADE_DISTANCE = 50; // pixels - fade transition zone
-export const DARKNESS_ALPHA = 0.85; // 0.0 = no darkness, 1.0 = pitch black
-export const LIGHT_INTENSITY = 0.9; // 0.0 = dim, 1.0 = bright
-export const AMBIENT_LIGHT_LEVEL = 0.15; // minimum light level everywhere
+export const PLAYER_LIGHT_RADIUS = 200; // pixels - how far player can see (увеличен)
+export const MONSTER_LIGHT_RADIUS = 80; // pixels - monster visibility radius
+export const LIGHT_FADE_DISTANCE = 30; // pixels - fade transition zone
+export const DARKNESS_ALPHA = 0.7; // 0.0 = no darkness, 1.0 = pitch black (светлее)
+export const LIGHT_INTENSITY = 1.0; // 0.0 = dim, 1.0 = bright (максимальная яркость)
+export const AMBIENT_LIGHT_LEVEL = 0.05; // minimum light level everywhere (очень темно)
+
+// Bullet Flash Effects
+export const BULLET_FLASH_ENABLED = true; // Enable flash effects for bullets
+export const BULLET_FLASH_RADIUS = 60; // pixels - size of bullet flash
+export const BULLET_FLASH_DURATION = 150; // ms - how long flash lasts
+
+// Monster Glow Effects
+export const MONSTER_GLOW_ENABLED = true; // Enable glow effects for monsters
+export const MONSTER_GLOW_COLOR = 0xffaa00; // Orange color for monster glow
 
 // Tile (rectangle)
 export const TILE_SIZE = 32;
