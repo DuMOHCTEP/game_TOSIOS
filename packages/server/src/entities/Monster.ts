@@ -84,6 +84,7 @@ export class Monster extends Circle {
     // Circular attack system
     private lastCircularAttack: number = 0;
     private circularAttackCount: number = 0;
+    private firstCircularAttackDone: boolean = false;
 
     // Init
     constructor(x: number, y: number, radius: number, mapWidth: number, mapHeight: number, lives: number, monsterType?: MonsterType) {
@@ -409,23 +410,39 @@ export class Monster extends Circle {
     }
 
     private handleCircularAttacks(player: Player, currentTime: number) {
-        // Circular attack every 10 seconds - 3 shots in a circle
-        if (this.canUseCircularAttack() && this.circularAttackCount === 0) {
+        // First circular attack happens immediately after boss spawns
+        if (!this.firstCircularAttackDone) {
+            console.log('Boss performing first circular attack immediately');
+            this.lastCircularAttack = currentTime;
+            this.fireCircularShot(player, 0);
+            this.fireCircularShot(player, 1);
+            this.fireCircularShot(player, 2);
+            this.firstCircularAttackDone = true;
+            this.circularAttackCount = 0;
+            return;
+        }
+
+        // Subsequent circular attacks every 10 seconds
+        if (currentTime - this.lastCircularAttack >= 10000 && this.circularAttackCount === 0) {
+            console.log('Boss starting circular attack sequence');
             // Start circular attack sequence
             this.lastCircularAttack = currentTime;
             this.fireCircularShot(player, 0);
             this.circularAttackCount = 1;
         } else if (this.circularAttackCount > 0 && this.circularAttackCount < 3) {
             // Continue firing shots every 0.5 seconds
-            const timeSinceStart = currentTime - (this.lastCircularAttack - 10000);
-            const shotIndex = Math.floor(timeSinceStart / 500);
+            const timeSinceStart = currentTime - this.lastCircularAttack;
+            const expectedShotIndex = Math.floor(timeSinceStart / 500) + 1;
 
-            if (shotIndex > this.circularAttackCount - 1 && shotIndex < 3) {
-                this.fireCircularShot(player, shotIndex);
-                this.circularAttackCount = shotIndex + 1;
-            } else if (shotIndex >= 3) {
-                // Sequence complete
-                this.circularAttackCount = 0;
+            if (expectedShotIndex > this.circularAttackCount && expectedShotIndex <= 3) {
+                console.log(`Boss firing circular shot ${expectedShotIndex}/3`);
+                this.fireCircularShot(player, expectedShotIndex - 1);
+                this.circularAttackCount = expectedShotIndex;
+
+                if (this.circularAttackCount >= 3) {
+                    console.log('Boss circular attack sequence complete');
+                    this.circularAttackCount = 0;
+                }
             }
         }
     }

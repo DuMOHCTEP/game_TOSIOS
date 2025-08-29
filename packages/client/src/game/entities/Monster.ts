@@ -73,6 +73,9 @@ export class Monster extends BaseEntity {
         // Create boss visual effects if this is a boss
         if (this._isBoss) {
             this.createBossVisualEffects();
+            console.log('Boss visual effects created for monster, HP:', this._bossHP, '/', this._bossMaxHP);
+            // Force initial update of visual effects
+            this.updateBossVisualEffects();
         }
 
         // Shadow
@@ -188,6 +191,11 @@ export class Monster extends BaseEntity {
         // Update boss visual effects
         if (this._isBoss) {
             this.updateBossVisualEffects();
+            // Debug: check if boss glow exists
+            if (!this._bossGlow) {
+                console.log('Boss glow is null, recreating...');
+                this.createBossVisualEffects();
+            }
         }
     }
 
@@ -220,9 +228,10 @@ export class Monster extends BaseEntity {
         const time = Date.now() * 0.001;
 
         if (this._isBoss) {
-            // Boss has majestic pulsing
+            // Boss has majestic pulsing with wider scale
             const bossPulse = 1.0 + Math.sin(time * 2) * 0.1;
-            this.sprite.scale.set(bossPulse, bossPulse);
+            const bossWidth = 1.3; // 30% wider
+            this.sprite.scale.set(bossPulse * bossWidth, bossPulse);
         } else if (this._monsterType === 'fast' && Date.now() < this._cooldownUntil) {
             // Fast monsters have subtle scale pulsing during cooldown
             const scalePulse = 1.0 + Math.sin(time * 8) * 0.05;
@@ -253,7 +262,12 @@ export class Monster extends BaseEntity {
     }
 
     private updateBossVisualEffects() {
-        if (!this._isBoss || !this._bossGlow || !this._healthBar) return;
+        if (!this._isBoss || !this._bossGlow || !this._healthBar) {
+            console.log('Boss visual effects not ready:', { isBoss: this._isBoss, hasGlow: !!this._bossGlow, hasBar: !!this._healthBar });
+            return;
+        }
+
+        console.log('Updating boss visual effects, HP:', this._bossHP, '/', this._bossMaxHP);
 
         const time = Date.now() * 0.001;
         const radius = this.radius;
