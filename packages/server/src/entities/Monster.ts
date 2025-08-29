@@ -172,7 +172,7 @@ export class Monster extends Circle {
         this.executeSmartChaseAI(player, distance);
 
         // Fast monsters can dash when close enough
-        if (this.monsterType === 'fast' && this.canDash() && distance < 100) {
+        if (this.monsterType === 'fast' && this.canDash && distance < 100) {
             this.startDash(player.x, player.y);
         }
     }
@@ -251,7 +251,7 @@ export class Monster extends Circle {
     private executeFastChase(player: Player, distance: number, attackDistance: number, moveSpeed: number) {
         if (distance > attackDistance + 60) {
             // Fast approach when far
-            this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+        this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
             this.move(moveSpeed * 1.1, this.rotation);
         } else if (distance > attackDistance + 20) {
             // Circling behavior when medium distance
