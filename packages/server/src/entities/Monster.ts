@@ -217,7 +217,7 @@ export class Monster extends Circle {
     }
 
     private executeSmartChaseAI(player: Player, distance: number) {
-        const attackDistance = this.monsterType === 'boss' ? Constants.BOSS_ATTACK_DISTANCE : 30;
+        const attackDistance = this.monsterType === 'boss' ? Constants.BOSS_ATTACK_DISTANCE : Constants.MONSTER_ATTACK_DISTANCE;
         const speed = this.getChaseSpeed();
         const jerkyMultiplier = this.getJerkyMovementMultiplier();
 
@@ -261,17 +261,14 @@ export class Monster extends Circle {
             this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
             this.move(moveSpeed * 0.3, this.rotation);
 
-            // Bat ALWAYS uses dash when attacking - even if very close
-            if (distance <= attackDistance + 5 && this.canAttack) {
+            // Bat ALWAYS uses dash when attacking - exactly at attack distance
+            if (distance <= attackDistance && this.canAttack) {
                 this.startDash(player.x, player.y);
             }
-        } else if (distance < attackDistance - 1) {
-            // Very close - just stay and attack
-            // Don't move away, let the player handle positioning
-            if (Math.random() < 0.05) {
-                const smallMovement = (Math.random() - 0.5) * 0.1;
-                this.move(moveSpeed * smallMovement, Math.random() * Math.PI * 2);
-            }
+        } else if (distance < attackDistance) {
+            // Too close - retreat immediately to maintain minimum distance
+            const retreatAngle = Maths.calculateAngle(this.x, this.y, player.x, player.y);
+            this.move(moveSpeed * 0.8, retreatAngle);
         } else {
             // At optimal attack distance - prepare to attack
             if (this.canAttack) {
@@ -297,12 +294,10 @@ export class Monster extends Circle {
             // Close to attack distance - slow down
             this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
             this.move(moveSpeed * 0.4, this.rotation);
-        } else if (distance < attackDistance - 2) {
-            // Very close - minimal movement
-            if (Math.random() < 0.03) {
-                const smallAngle = Maths.calculateAngle(this.x, this.y, player.x, player.y);
-                this.move(moveSpeed * 0.1, smallAngle);
-            }
+        } else if (distance < attackDistance) {
+            // Too close - retreat immediately to maintain minimum distance
+            const retreatAngle = Maths.calculateAngle(this.x, this.y, player.x, player.y);
+            this.move(moveSpeed * 0.8, retreatAngle);
         } else {
             // At attack distance - ready to attack
             // Small random movement to avoid being completely static
@@ -327,12 +322,10 @@ export class Monster extends Circle {
             // Very close - slow down but keep moving toward
             this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
             this.move(moveSpeed * 0.3, this.rotation);
-        } else if (distance < attackDistance - 2) {
-            // Very close - minimal retreat if needed
-            if (Math.random() < 0.1) {
-                this.rotation = Maths.calculateAngle(this.x, this.y, player.x, player.y);
-                this.move(moveSpeed * 0.1, this.rotation);
-            }
+        } else if (distance < attackDistance) {
+            // Too close - retreat immediately to maintain minimum distance
+            const retreatAngle = Maths.calculateAngle(this.x, this.y, player.x, player.y);
+            this.move(moveSpeed * 1.0, retreatAngle);
         } else {
             // At attack distance - aggressive behavior
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
@@ -357,10 +350,10 @@ export class Monster extends Circle {
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
             const fastOffset = Math.sin(Date.now() * 0.025) * 0.5; // Extremely fast circling
             this.move(moveSpeed * 0.4, angleToPlayer + fastOffset);
-        } else if (distance < attackDistance - 3) {
-            // Quick retreat if too close
-            this.rotation = Maths.calculateAngle(this.x, this.y, player.x, player.y);
-            this.move(moveSpeed * 1.0, this.rotation);
+        } else if (distance < attackDistance) {
+            // Too close - retreat immediately to maintain minimum distance
+            const retreatAngle = Maths.calculateAngle(this.x, this.y, player.x, player.y);
+            this.move(moveSpeed * 1.2, retreatAngle);
         } else {
             // At attack distance - very erratic movement
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
