@@ -208,6 +208,11 @@ export class Game {
         if (this.inputs.shoot) {
             this.shoot();
         }
+
+        // Update archer animation when not moving
+        if (this.me && this.me.characterType === 'archer' && !this.inputs.up && !this.inputs.down && !this.inputs.left && !this.inputs.right) {
+            this.me.updateArcherAnimationByMovement(false, false);
+        }
     };
 
     private updatePlayers = () => {
@@ -373,6 +378,11 @@ export class Game {
         this.me.x = clampedPosition.x;
         this.me.y = clampedPosition.y;
 
+        // Update archer animation based on movement
+        if (this.me.characterType === 'archer') {
+            this.me.updateArcherAnimationByMovement(true, false);
+        }
+
         // Collisions: Walls
         const correctedPosition = this.walls.correctWithCircle(this.me.body);
         this.me.x = correctedPosition.x;
@@ -451,6 +461,11 @@ export class Game {
                 angle: this.me.rotation,
             },
         });
+
+        // Update archer animation for shooting
+        if (this.me.characterType === 'archer') {
+            this.me.updateArcherAnimationByMovement(false, true);
+        }
     };
 
     // SPAWNERS
@@ -569,7 +584,7 @@ export class Game {
             if (attributes.characterType && attributes.characterType !== this.me.characterType) {
                 this.me.characterType = attributes.characterType;
                 this.me.updateTexturesForCharacter(attributes.characterType);
-                this.me.updateWeaponForCharacter(attributes.characterType);
+                console.log(`🎭 Character changed to: ${attributes.characterType}`);
             }
 
             if (attributes.ack !== this.me.ack) {

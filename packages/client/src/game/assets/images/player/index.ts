@@ -8,22 +8,74 @@ import playerIdle2 from './player-idle-2.png';
 import playerIdle3 from './player-idle-3.png';
 import playerIdle4 from './player-idle-4.png';
 
+// Archer sprite sheets
+import archerIdleImage from './archer/Archer_Idle.png';
+import archerRunImage from './archer/Archer_Run.png';
+import archerShootImage from './archer/Archer_Shoot.png';
+
 // Warrior (default character)
 const playerDeadTextures = createTexturesArray([playerDead1, playerDead2, playerDead3, playerDead4]);
 const playerIdleTextures = createTexturesArray([playerIdle1, playerIdle2, playerIdle3, playerIdle4]);
 
-// Temporarily disabled archer textures
-// import archerIdle from './archer/Archer_Idle.png';
-// import archerRun from './archer/Archer_Run.png';
-// import archerShoot from './archer/Archer_Shoot.png';
-// const archerIdleTexture = archerIdle;
-// const archerRunTexture = archerRun;
-// const archerShootTexture = archerShoot;
+// Function to create frames from sprite sheet at runtime
+export function createFramesFromSpriteSheetAtRuntime(
+    texturePath: string,
+    frameCount: number,
+    frameWidth = 32,
+    frameHeight = 32
+): Promise<PIXI.Texture[]> {
+    return new Promise((resolve) => {
+        // Load the texture
+        const baseTexture = PIXI.BaseTexture.from(texturePath);
+
+        baseTexture.on('loaded', () => {
+            const frames: PIXI.Texture[] = [];
+
+            for (let i = 0; i < frameCount; i++) {
+                const rect = new PIXI.Rectangle(
+                    i * frameWidth,
+                    0,
+                    frameWidth,
+                    frameHeight
+                );
+                const texture = new PIXI.Texture(baseTexture, rect);
+                frames.push(texture);
+            }
+
+            resolve(frames);
+        });
+
+        baseTexture.on('error', (error) => {
+            console.error(`Failed to load sprite sheet: ${texturePath}`, error);
+            resolve([]);
+        });
+    });
+}
+
+// Archer sprite sheet configurations
+export const archerSpriteSheets = {
+    idle: {
+        image: archerIdleImage,
+        frameCount: 6,
+        frameWidth: 32,
+        frameHeight: 32
+    },
+    run: {
+        image: archerRunImage,
+        frameCount: 4,
+        frameWidth: 32,
+        frameHeight: 32
+    },
+    shoot: {
+        image: archerShootImage,
+        frameCount: 8,
+        frameWidth: 32,
+        frameHeight: 32
+    }
+};
 
 export {
     playerDeadTextures,
-    playerIdleTextures
-    // archerIdleTexture,
-    // archerRunTexture,
-    // archerShootTexture
+    playerIdleTextures,
+    createFramesFromSpriteSheetAtRuntime
 };

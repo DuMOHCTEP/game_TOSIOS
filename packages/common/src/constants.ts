@@ -157,7 +157,7 @@ export const CHARACTER_TYPES = ['warrior', 'archer'] as const;
 export type CharacterType = typeof CHARACTER_TYPES[number];
 
 // Character-specific constants
-export const CHARACTER_DEFAULT = 'warrior';
+export const CHARACTER_DEFAULT = 'archer';
 
 // Props (rectangle)
 export const FLASKS_COUNT = 3;
