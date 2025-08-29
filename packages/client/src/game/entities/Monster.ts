@@ -267,40 +267,79 @@ export class Monster extends BaseEntity {
             return;
         }
 
-        console.log('Updating boss visual effects, HP:', this._bossHP, '/', this._bossMaxHP);
-
         const time = Date.now() * 0.001;
         const radius = this.radius;
 
-        // Update cold glowing aura
+        // Update epic boss aura
         this._bossGlow.clear();
-        const glowIntensity = 0.4 + Math.sin(time * 2) * 0.15; // Stronger pulsing cold glow
+        const glowIntensity = 0.6 + Math.sin(time * 1.5) * 0.2; // Very strong pulsing
 
-        // Outer cold blue aura
-        this._bossGlow.beginFill(0x0088ff, glowIntensity * 0.6);
-        this._bossGlow.drawCircle(0, 0, radius * 2.0);
+        // Core energy sphere
+        this._bossGlow.beginFill(0xffffff, glowIntensity * 0.8);
+        this._bossGlow.drawCircle(0, 0, radius * 0.8);
         this._bossGlow.endFill();
 
-        // Middle icy blue aura
-        this._bossGlow.beginFill(0x44aaff, glowIntensity * 0.8);
-        this._bossGlow.drawCircle(0, 0, radius * 1.7);
-        this._bossGlow.endFill();
+        // Inner energy rings
+        for (let ring = 0; ring < 3; ring++) {
+            const ringRadius = radius * (1.0 + ring * 0.3);
+            const ringAlpha = glowIntensity * (0.6 - ring * 0.15);
+            const ringColor = ring === 0 ? 0x00ffff : ring === 1 ? 0x0088ff : 0x0044aa;
 
-        // Inner bright blue core
-        this._bossGlow.beginFill(0x66ccff, glowIntensity);
-        this._bossGlow.drawCircle(0, 0, radius * 1.4);
-        this._bossGlow.endFill();
+            this._bossGlow.lineStyle(2, ringColor, ringAlpha);
+            this._bossGlow.drawCircle(0, 0, ringRadius);
+            this._bossGlow.lineStyle(0); // Reset line style
+        }
 
-        // Extra cold particles effect
-        for (let i = 0; i < 6; i++) {
-            const angle = (time * 0.5 + i * Math.PI / 3) % (Math.PI * 2);
-            const distance = radius * (1.8 + Math.sin(time * 3 + i) * 0.2);
+        // Outer energy waves
+        for (let wave = 0; wave < 4; wave++) {
+            const waveRadius = radius * (1.8 + Math.sin(time * 2 + wave) * 0.3);
+            const waveAlpha = glowIntensity * 0.4 * (1 - wave * 0.2);
+
+            this._bossGlow.beginFill(0x44aaff, waveAlpha);
+            this._bossGlow.drawCircle(0, 0, waveRadius);
+            this._bossGlow.endFill();
+        }
+
+        // Energy particles orbiting around boss
+        for (let i = 0; i < 12; i++) {
+            const angle = (time * 1.0 + i * Math.PI / 6) % (Math.PI * 2);
+            const distance = radius * (1.5 + Math.sin(time * 2 + i) * 0.4);
             const x = Math.cos(angle) * distance;
             const y = Math.sin(angle) * distance;
+            const particleSize = 4 + Math.sin(time * 3 + i) * 2;
 
-            this._bossGlow.beginFill(0xaaddff, glowIntensity * 0.3);
-            this._bossGlow.drawCircle(x, y, 3 + Math.sin(time * 4 + i) * 1);
+            // Particle core
+            this._bossGlow.beginFill(0xffffff, glowIntensity);
+            this._bossGlow.drawCircle(x, y, particleSize * 0.3);
             this._bossGlow.endFill();
+
+            // Particle aura
+            this._bossGlow.beginFill(0x00ffff, glowIntensity * 0.6);
+            this._bossGlow.drawCircle(x, y, particleSize);
+            this._bossGlow.endFill();
+        }
+
+        // Lightning-like energy arcs
+        for (let arc = 0; arc < 6; arc++) {
+            const startAngle = (time * 0.8 + arc * Math.PI / 3) % (Math.PI * 2);
+            const endAngle = startAngle + Math.PI / 6;
+            const arcRadius = radius * 2.2;
+
+            const startX = Math.cos(startAngle) * arcRadius;
+            const startY = Math.sin(startAngle) * arcRadius;
+            const endX = Math.cos(endAngle) * arcRadius;
+            const endY = Math.sin(endAngle) * arcRadius;
+
+            this._bossGlow.lineStyle(3, 0x00ffff, glowIntensity * 0.7);
+            this._bossGlow.moveTo(startX, startY);
+            this._bossGlow.lineTo(endX, endY);
+        }
+
+        // Shockwave effects
+        if (Math.sin(time * 4) > 0.8) {
+            this._bossGlow.lineStyle(4, 0xffffff, glowIntensity * 0.9);
+            this._bossGlow.drawCircle(0, 0, radius * 2.5);
+            this._bossGlow.lineStyle(0);
         }
 
         // Update health bar

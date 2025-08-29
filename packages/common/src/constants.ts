@@ -56,6 +56,9 @@ export const MONSTER_ATTACK_MIN_DISTANCE = 150; // minimum distance during coold
 
 // Attack distance settings
 export const MONSTER_ATTACK_DISTANCE = 25; // pixels (reduced from 50)
+export const BOSS_ATTACK_DISTANCE = 60; // pixels (boss has much larger attack range)
+export const BOSS_CHASE_DISTANCE = 300; // pixels (boss pursues from much further)
+export const BOSS_TARGET_SWITCH_DISTANCE = 150; // pixels (distance to switch targets)
 
 // Aggressive Monster (new type)
 export const MONSTER_AGGRESSIVE_SPEED_PATROL = 1.0;

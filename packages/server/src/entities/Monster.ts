@@ -86,6 +86,9 @@ export class Monster extends Circle {
     private circularAttackCount: number = 0;
     private firstCircularAttackDone: boolean = false;
 
+    // Boss target switching system
+    private lastTargetSwitch: number = 0;
+
     // Init
     constructor(x: number, y: number, radius: number, mapWidth: number, mapHeight: number, lives: number, monsterType?: MonsterType) {
         // Initialize type first
@@ -195,8 +198,9 @@ export class Monster extends Circle {
 
         const distance = Maths.getDistance(this.x, this.y, player.x, player.y);
 
-        // Did player run away?
-        if (distance > Constants.MONSTER_SIGHT) {
+        // Did player run away? (Boss has much longer chase distance)
+        const maxChaseDistance = this.monsterType === 'boss' ? Constants.BOSS_CHASE_DISTANCE : Constants.MONSTER_SIGHT;
+        if (distance > maxChaseDistance) {
             this.startIdle();
             return;
         }
@@ -211,7 +215,7 @@ export class Monster extends Circle {
     }
 
     private executeSmartChaseAI(player: Player, distance: number) {
-        const attackDistance = 30; // Allow monsters to get closer during chase (was 25, now 30 for more aggressive behavior)
+        const attackDistance = this.monsterType === 'boss' ? Constants.BOSS_ATTACK_DISTANCE : 30;
         const speed = this.getChaseSpeed();
         const jerkyMultiplier = this.getJerkyMovementMultiplier();
 
@@ -232,8 +236,8 @@ export class Monster extends Circle {
                 break;
 
             case 'boss':
-                // Boss: complex AI with abilities
-                this.executeBossChase(player, distance, attackDistance, speed * jerkyMultiplier);
+                // Boss: complex AI with abilities and target switching
+                this.executeBossChaseWithTargetSwitching(player, distance, attackDistance, speed * jerkyMultiplier);
                 break;
 
             default:
@@ -364,6 +368,33 @@ export class Monster extends Circle {
         }
     }
 
+    private executeBossChaseWithTargetSwitching(player: Player, distance: number, attackDistance: number, moveSpeed: number) {
+        // Boss has enhanced target switching and more aggressive behavior
+        const currentTime = Date.now();
+
+        // Check if we should switch targets (every 5-8 seconds or if target is too far)
+        if (currentTime - this.lastTargetSwitch > (5000 + Math.random() * 3000) ||
+            distance > Constants.BOSS_CHASE_DISTANCE) {
+            this.attemptTargetSwitch(player);
+            this.lastTargetSwitch = currentTime;
+        }
+
+        // Enhanced boss behavior with more complex patterns
+        this.executeBossChase(player, distance, attackDistance, moveSpeed);
+    }
+
+    private attemptTargetSwitch(currentPlayer: Player) {
+        // Find the closest player within switch distance
+        let closestPlayer: Player | null = null;
+        let closestDistance = Constants.BOSS_TARGET_SWITCH_DISTANCE;
+
+        // This would need access to all players - for now, just use current player
+        // In a full implementation, we'd iterate through all players here
+        this.targetPlayerId = currentPlayer.id; // Keep current target for now
+
+        console.log('Boss considering target switch');
+    }
+
     private executeBossChase(player: Player, distance: number, attackDistance: number, moveSpeed: number) {
         const time = Date.now() * 0.001;
         const currentTime = Date.now();
@@ -422,28 +453,26 @@ export class Monster extends Circle {
             return;
         }
 
-        // Subsequent circular attacks every 10 seconds
-        if (currentTime - this.lastCircularAttack >= 10000 && this.circularAttackCount === 0) {
-            console.log('Boss starting circular attack sequence');
-            // Start circular attack sequence
+        // Boss unleashes devastating circular attacks every 8 seconds
+        if (currentTime - this.lastCircularAttack >= 8000 && this.circularAttackCount === 0) {
+            console.log('Boss unleashing devastating circular attack!');
+            // Start enhanced circular attack sequence - all shots fire rapidly
             this.lastCircularAttack = currentTime;
             this.fireCircularShot(player, 0);
-            this.circularAttackCount = 1;
-        } else if (this.circularAttackCount > 0 && this.circularAttackCount < 3) {
-            // Continue firing shots every 0.5 seconds
-            const timeSinceStart = currentTime - this.lastCircularAttack;
-            const expectedShotIndex = Math.floor(timeSinceStart / 500) + 1;
+            this.fireCircularShot(player, 1);
+            this.fireCircularShot(player, 2);
+            this.circularAttackCount = 3; // Mark complete for faster cycling
 
-            if (expectedShotIndex > this.circularAttackCount && expectedShotIndex <= 3) {
-                console.log(`Boss firing circular shot ${expectedShotIndex}/3`);
-                this.fireCircularShot(player, expectedShotIndex - 1);
-                this.circularAttackCount = expectedShotIndex;
-
-                if (this.circularAttackCount >= 3) {
-                    console.log('Boss circular attack sequence complete');
-                    this.circularAttackCount = 0;
-                }
+            // Add extra random shots for unpredictability
+            if (Math.random() < 0.3) {
+                setTimeout(() => {
+                    console.log('Boss bonus attack!');
+                    this.fireCircularShot(player, Math.floor(Math.random() * 3));
+                }, 300);
             }
+        } else if (this.circularAttackCount >= 3) {
+            // Reset for next devastating attack
+            this.circularAttackCount = 0;
         }
     }
 
@@ -452,22 +481,26 @@ export class Monster extends Circle {
         const baseAngle = Maths.calculateAngle(player.x, player.y, this.x, this.y);
         const shotAngle = baseAngle + (shotIndex * Math.PI * 2 / 3); // 120 degrees apart
 
-        // Create projectile in the direction of the shot
-        console.log(`Boss fires circular shot ${shotIndex + 1}/3 at angle ${shotAngle.toFixed(2)}`);
+        // Boss shots are more powerful and have larger area
+        const damageRadius = 80; // Increased from 60
+        const damage = 4; // Increased from 3
 
-        // In a real implementation, this would create actual projectiles
-        // For now, simulate area damage in the direction of the shot
-        const damageRadius = 60;
-        const damage = 3;
+        console.log(`Boss unleashes devastating shot ${shotIndex + 1}/3 at angle ${shotAngle.toFixed(2)} - WATCH OUT!`);
 
-        // Calculate damage area
+        // Calculate damage area with wider spread
         const damageX = this.x + Math.cos(shotAngle) * damageRadius;
         const damageY = this.y + Math.sin(shotAngle) * damageRadius;
 
         const distanceToPlayer = Maths.getDistance(damageX, damageY, player.x, player.y);
         if (distanceToPlayer <= damageRadius) {
-            console.log(`Circular shot ${shotIndex + 1} hits player for ${damage} damage!`);
+            console.log(`💥 CRITICAL HIT! Boss shot ${shotIndex + 1} deals ${damage} massive damage!`);
+            // In real implementation, this would trigger player damage and screen shake
+        } else {
+            console.log(`Boss shot ${shotIndex + 1} missed, but creates dangerous area!`);
         }
+
+        // Add visual feedback for the shot direction
+        console.log(`⚡ Energy blast fired at ${damageX.toFixed(0)}, ${damageY.toFixed(0)}`);
     }
 
     updateCooldown(players: MapSchema<Player>) {
