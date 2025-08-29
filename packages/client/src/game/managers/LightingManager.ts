@@ -34,15 +34,21 @@ export class LightingManager {
 
     private initLighting() {
         console.log('🏮 LightingManager: Инициализация системы освещения подземелья');
+        console.log('Параметры освещения:', {
+            darknessAlpha: this.darknessAlpha,
+            lightIntensity: this.lightIntensity,
+            playerLightRadius: this.playerLightRadius,
+            ambientLightLevel: this.ambientLightLevel
+        });
 
         // Создаем полноэкранный слой темноты
         this.darknessLayer.beginFill(0x000000, this.darknessAlpha);
         this.darknessLayer.drawRect(-5000, -5000, 10000, 10000); // Очень большая область
         this.darknessLayer.endFill();
 
-        // Создаем маску света (изначально пустая)
-        this.lightMask.beginFill(0xffffff, 1.0);
-        this.lightMask.drawRect(-5000, -5000, 10000, 10000); // Прозрачная маска
+        // Создаем маску света (изначально пустая - всё темно)
+        this.lightMask.beginFill(0x000000, 1.0); // Начинаем с полной темноты
+        this.lightMask.drawRect(-5000, -5000, 10000, 10000);
         this.lightMask.endFill();
 
         // Добавляем слои в контейнер
@@ -50,12 +56,16 @@ export class LightingManager {
 
         // Применяем маску к слою темноты
         this.darknessLayer.mask = this.lightMask;
+
+        console.log('🏮 LightingManager: Инициализация завершена');
     }
 
     /**
      * Обновляет освещение вокруг игрока
      */
     public updatePlayerLight(playerX: number, playerY: number, screenWidth: number, screenHeight: number) {
+        console.log(`💡 LightingManager: Обновление света игрока [${playerX.toFixed(0)}, ${playerY.toFixed(0)}], радиус: ${this.playerLightRadius}`);
+
         // Очищаем предыдущую маску света
         this.lightMask.clear();
 
@@ -77,6 +87,8 @@ export class LightingManager {
         // Позиционируем слой темноты так, чтобы он следовал за камерой
         this.darknessLayer.x = -playerX + screenWidth / 2;
         this.darknessLayer.y = -playerY + screenHeight / 2;
+
+        console.log(`🌑 Darkness layer position: [${this.darknessLayer.x.toFixed(0)}, ${this.darknessLayer.y.toFixed(0)}]`);
     }
 
     /**

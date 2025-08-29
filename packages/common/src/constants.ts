@@ -23,7 +23,7 @@ export const GAME_MODES = ['deathmatch', 'team deathmatch'];
 export const BACKGROUND_COLOR = '#25131A';
 
 // Lighting System (Dungeon Atmosphere) - Set to false to disable dungeon lighting
-export const LIGHTING_ENABLED = true;
+export const LIGHTING_ENABLED = true; // Включено для тестирования
 export const PLAYER_LIGHT_RADIUS = 200; // pixels - how far player can see (увеличен)
 export const MONSTER_LIGHT_RADIUS = 80; // pixels - monster visibility radius
 export const LIGHT_FADE_DISTANCE = 30; // pixels - fade transition zone
