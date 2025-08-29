@@ -38,10 +38,7 @@ const GameModesList: IListItem[] = Constants.GAME_MODES.map((value) => ({
     title: value,
 }));
 
-const CharactersList: IListItem[] = Constants.CHARACTER_TYPES.map((value) => ({
-    value,
-    title: value === 'warrior' ? 'Воин' : value === 'archer' ? 'Лучник' : value,
-}));
+// CharactersList больше не нужен в создании комнаты
 
 interface IProps extends RouteComponentProps {}
 
@@ -53,7 +50,6 @@ interface IState {
     roomMap: any;
     roomMaxPlayers: any;
     mode: any;
-    characterType: string;
     rooms: Array<RoomAvailable<any>>;
     timer: NodeJS.Timeout | null;
 }
@@ -72,7 +68,6 @@ export default class Home extends Component<IProps, IState> {
             roomMap: MapsList[0].value,
             roomMaxPlayers: PlayersCountList[0].value,
             mode: GameModesList[0].value,
-            characterType: localStorage.getItem('characterType') || Constants.CHARACTER_DEFAULT,
             rooms: [],
             timer: null,
         };
@@ -144,20 +139,12 @@ export default class Home extends Component<IProps, IState> {
         navigate(`/${roomId}`);
     };
 
-    handleCharacterTypeChange = (value: string) => {
-        localStorage.setItem('characterType', value);
-        this.setState({
-            characterType: value,
-        });
-    };
-
     handleCreateRoomClick = () => {
-        const { playerName, roomName, roomMap, roomMaxPlayers, mode, characterType } = this.state;
+        const { playerName, roomName, roomMap, roomMaxPlayers, mode } = this.state;
         const analytics = useAnalytics();
 
         const options: Types.IRoomOptions = {
             playerName,
-            characterType,
             roomName,
             roomMap,
             roomMaxPlayers,
@@ -283,7 +270,7 @@ export default class Home extends Component<IProps, IState> {
     };
 
     renderNewRoom = () => {
-        const { isNewRoom, roomName, roomMap, roomMaxPlayers, mode, characterType } = this.state;
+        const { isNewRoom, roomName, roomMap, roomMaxPlayers, mode } = this.state;
         const analytics = useAnalytics();
 
         return (
@@ -359,23 +346,6 @@ export default class Home extends Component<IProps, IState> {
                                 analytics.track({
                                     category: 'Game',
                                     action: 'Mode',
-                                    label: event.target.value,
-                                });
-                            }}
-                        />
-                        <Space size="s" />
-
-                        {/* Character */}
-                        <Text>Персонаж:</Text>
-                        <Space size="xxs" />
-                        <Select
-                            value={characterType}
-                            values={CharactersList}
-                            onChange={(event: any) => {
-                                this.handleCharacterTypeChange(event.target.value);
-                                analytics.track({
-                                    category: 'Game',
-                                    action: 'Character',
                                     label: event.target.value,
                                 });
                             }}

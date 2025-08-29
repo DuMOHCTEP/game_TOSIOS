@@ -6,7 +6,7 @@ import { RouteComponentProps, navigate } from '@reach/router';
 import { Game } from '../game/Game';
 import { Helmet } from 'react-helmet';
 import ReactNipple from 'react-nipple';
-import { View } from '../components';
+import { View, Button, Text, Space, Select, IListItem } from '../components';
 import { isMobile } from 'react-device-detect';
 import qs from 'querystringify';
 
@@ -16,6 +16,8 @@ interface IProps extends RouteComponentProps {
 
 interface IState {
     hud: HUDProps;
+    showCharacterSelect: boolean;
+    selectedCharacter: string;
 }
 
 export default class Match extends Component<IProps, IState> {
@@ -52,6 +54,8 @@ export default class Match extends Component<IProps, IState> {
                 messages: [],
                 announce: '',
             },
+            showCharacterSelect: false,
+            selectedCharacter: localStorage.getItem('characterType') || Constants.CHARACTER_DEFAULT,
         };
     }
 
@@ -77,10 +81,10 @@ export default class Match extends Component<IProps, IState> {
                 roomMaxPlayers: Number(parsedSearch.roomMaxPlayers),
             };
         } else {
-            // When joining an existing room, pass player's name and character type
+            // When joining an existing room, pass player's name
+            // Character will be chosen after joining the game
             options = {
                 playerName: localStorage.getItem('playerName'),
-                characterType: localStorage.getItem('characterType') || Constants.CHARACTER_DEFAULT,
             };
         }
 
@@ -135,6 +139,9 @@ export default class Match extends Component<IProps, IState> {
 
         // Start players refresh listeners
         this.timer = setInterval(this.updateRoom, Constants.PLAYERS_REFRESH);
+
+        // Show character selection interface
+        this.setState({ showCharacterSelect: true });
     };
 
     stop = () => {
@@ -240,6 +247,9 @@ export default class Match extends Component<IProps, IState> {
             case 'timeout':
                 announce = `Timeout...`;
                 break;
+            case 'characterChanged':
+                announce = `Игрок сменил персонажа`;
+                break;
             default:
                 break;
         }
@@ -263,6 +273,27 @@ export default class Match extends Component<IProps, IState> {
         }
 
         this.room.send(action.type, action);
+    };
+
+    handleCharacterSelect = (characterType: string) => {
+        this.setState({
+            selectedCharacter: characterType,
+        });
+    };
+
+    handleCharacterConfirm = () => {
+        const { selectedCharacter } = this.state;
+
+        // Save to localStorage
+        localStorage.setItem('characterType', selectedCharacter);
+
+        // Send to server
+        if (this.room) {
+            this.room.send('changeCharacter', { characterType: selectedCharacter });
+        }
+
+        // Hide character selection
+        this.setState({ showCharacterSelect: false });
     };
 
     // HANDLERS: Inputs
@@ -325,9 +356,73 @@ export default class Match extends Component<IProps, IState> {
                     messages={hud.messages}
                     announce={hud.announce}
                 />
+
+                {/* Character Selection */}
+                {this.renderCharacterSelection()}
             </View>
         );
     }
+
+    renderCharacterSelection = () => {
+        const { showCharacterSelect, selectedCharacter } = this.state;
+
+        if (!showCharacterSelect) {
+            return null;
+        }
+
+        const charactersList: IListItem[] = Constants.CHARACTER_TYPES.map((value) => ({
+            value,
+            title: value === 'warrior' ? 'Воин' : value === 'archer' ? 'Лучник' : value,
+        }));
+
+        return (
+            <View
+                fullscreen
+                center
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    zIndex: 1000,
+                }}
+            >
+                <View
+                    style={{
+                        backgroundColor: '#ffffff',
+                        padding: 32,
+                        borderRadius: 8,
+                        minWidth: 300,
+                        maxWidth: 400,
+                    }}
+                >
+                    <Text style={{ fontSize: 24, fontWeight: 'bold', textAlign: 'center' }}>
+                        Выберите персонажа
+                    </Text>
+                    <Space size="m" />
+
+                    <Text>Персонаж:</Text>
+                    <Space size="xxs" />
+                    <Select
+                        value={selectedCharacter}
+                        values={charactersList}
+                        onChange={(event: any) => {
+                            this.handleCharacterSelect(event.target.value);
+                        }}
+                    />
+                    <Space size="m" />
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+                        <Button
+                            title="Выбрать персонажа"
+                            text="Выбрать"
+                            onClick={this.handleCharacterConfirm}
+                        />
+                    </View>
+                </View>
+            </View>
+        );
+    };
 
     renderJoySticks = () => {
         return (

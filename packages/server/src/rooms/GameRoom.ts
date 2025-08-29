@@ -38,7 +38,7 @@ export class GameRoom extends Room<GameState> {
         );
 
         // Listen to messages from clients
-        this.onMessage('*', (client: Client, type: string | number, message: Models.ActionJSON) => {
+        this.onMessage('*', (client: Client, type: string | number, message: any) => {
             const playerId = client.sessionId;
 
             // Validate which type of message is accepted
@@ -51,6 +51,9 @@ export class GameRoom extends Room<GameState> {
                         ...message,
                     });
                     break;
+                case 'changeCharacter':
+                    this.state.playerUpdateCharacter(playerId, message.characterType);
+                    break;
                 default:
                     break;
             }
@@ -58,6 +61,7 @@ export class GameRoom extends Room<GameState> {
     }
 
     onJoin(client: Client, options: Types.IPlayerOptions) {
+        // Character will be set later via separate message
         this.state.playerAdd(client.sessionId, options.playerName);
 
         console.log(`${new Date().toISOString()} [Join] id=${client.sessionId} player=${options.playerName}`);
