@@ -406,28 +406,25 @@ export class GameState extends Schema {
     // Monsters
     //
     private monstersAdd = (count: number) => {
-        // Ensure at least 1 boss always spawns
+        // Ensure exactly ONE boss spawns on small maps, multiple on larger maps
+        const isSmallMap = this.map.width <= 512 && this.map.height <= 512; // 16x16 tiles * 32px = 512px
         let bossSpawned = false;
+        let bossCount = 0;
+        const maxBosses = isSmallMap ? 1 : Math.max(1, Math.floor(count / 3)); // 1 boss on small maps, more on large
 
         for (let i = 0; i < count; i++) {
             // Determine monster type first
             let monsterType: Constants.MonsterType;
 
-            // First monster is always a boss, or force spawn boss if none spawned yet
-            if (i === 0 || (!bossSpawned && Math.random() < 0.3)) {
+            // Spawn boss if we haven't reached the limit and it's time for a boss
+            if (!bossSpawned && bossCount < maxBosses && (i === 0 || Math.random() < 0.4)) {
                 monsterType = 'boss';
                 bossSpawned = true;
+                bossCount++;
             } else {
-                // Random selection for other monsters
-                const rand = Math.random();
-                if (rand < 0.15) { // 15% chance for additional bosses
-                    monsterType = 'boss';
-                    bossSpawned = true;
-                } else {
-                    // Regular monsters (including vampire)
-                    const regularTypes = Constants.MONSTER_TYPES.filter(type => type !== 'boss');
-                    monsterType = regularTypes[Maths.getRandomInt(0, regularTypes.length - 1)];
-                }
+                // Regular monsters (including vampire)
+                const regularTypes = Constants.MONSTER_TYPES.filter(type => type !== 'boss');
+                monsterType = regularTypes[Maths.getRandomInt(0, regularTypes.length - 1)];
             }
 
             // Use appropriate size for different monster types

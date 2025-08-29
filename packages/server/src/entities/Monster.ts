@@ -180,16 +180,20 @@ export class Monster extends Circle {
         const jerkyMultiplier = this.getJerkyMovementMultiplier();
         this.move(speed * jerkyMultiplier, this.rotation);
 
-        // Is the monster out of bounds?
+        // Is the monster out of bounds? (More strict boundary checking)
+        const monsterPadding = this.radius + Constants.TILE_SIZE; // Full tile + monster radius padding
         if (
-            this.x < Constants.TILE_SIZE ||
-            this.x > this.mapWidth - Constants.TILE_SIZE ||
-            this.y < Constants.TILE_SIZE ||
-            this.y > this.mapHeight - Constants.TILE_SIZE
+            this.x < monsterPadding ||
+            this.x > this.mapWidth - monsterPadding ||
+            this.y < monsterPadding ||
+            this.y > this.mapHeight - monsterPadding
         ) {
-            this.x = Maths.clamp(this.x, 0, this.mapWidth);
-            this.y = Maths.clamp(this.y, 0, this.mapHeight);
+            // Force monster back into playable area
+            this.x = Maths.clamp(this.x, monsterPadding, this.mapWidth - monsterPadding);
+            this.y = Maths.clamp(this.y, monsterPadding, this.mapHeight - monsterPadding);
             this.rotation = Maths.getRandomInt(-3, 3);
+
+            console.log(`${this.type.toUpperCase()} forced back into bounds: (${this.x.toFixed(1)}, ${this.y.toFixed(1)})`);
         }
     }
 
@@ -795,9 +799,10 @@ export class Monster extends Circle {
         const newX = player.x + Math.cos(angle) * distance;
         const newY = player.y + Math.sin(angle) * distance;
 
-        // Keep within map bounds
-        this.x = Maths.clamp(newX, 0, this.mapWidth);
-        this.y = Maths.clamp(newY, 0, this.mapHeight);
+        // Keep within map bounds with monster radius padding
+        const padding = this.radius + Constants.TILE_SIZE;
+        this.x = Maths.clamp(newX, padding, this.mapWidth - padding);
+        this.y = Maths.clamp(newY, padding, this.mapHeight - padding);
 
         console.log(`Boss teleports to new position!`);
     }
@@ -1136,9 +1141,15 @@ export class Monster extends Circle {
         const newX = this.x + Math.cos(rotation) * speed;
         const newY = this.y + Math.sin(rotation) * speed;
 
-        // Check if new position would cause collision (this will be handled by GameState)
-        this.x = newX;
-        this.y = newY;
+        // Apply map boundaries to prevent monsters from flying out of arena
+        // Add padding for monster radius to ensure they don't clip through walls
+        const padding = this.radius + Constants.TILE_SIZE * 0.5; // Half tile padding
+        const clampedX = Maths.clamp(newX, padding, this.mapWidth - padding);
+        const clampedY = Maths.clamp(newY, padding, this.mapHeight - padding);
+
+        // Update position with boundary checks
+        this.x = clampedX;
+        this.y = clampedY;
     }
 
     attack(playerX: number, playerY: number) {

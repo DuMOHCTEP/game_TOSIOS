@@ -276,9 +276,10 @@ export class Monster extends BaseEntity {
             const squashScale = 0.9 + Math.sin(time * 10) * 0.1;
             this.sprite.scale.set(1.1, squashScale);
         } else if (this._monsterType === 'vampire') {
-            // Vampire has subtle ethereal pulsing
+            // Vampire has larger size and subtle ethereal pulsing
             const etherealPulse = 1.0 + Math.sin(time * 1.5) * 0.05;
-            this.sprite.scale.set(etherealPulse, etherealPulse);
+            const vampireScale = Constants.MONSTER_VAMPIRE_SIZE / Constants.MONSTER_SIZE; // Scale relative to regular monster
+            this.sprite.scale.set(etherealPulse * vampireScale, etherealPulse * vampireScale);
         } else {
             // Normal scale
             this.sprite.scale.set(1.0, 1.0);
