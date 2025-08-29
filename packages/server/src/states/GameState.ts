@@ -484,8 +484,18 @@ export class GameState extends Schema {
             return;
         }
 
-        // Update monster
+        // Store old position for collision detection
+        const oldX = monster.x;
+        const oldY = monster.y;
+
+        // Update monster AI
         monster.update(this.players);
+
+        // Handle wall collisions and correct position
+        this.handleMonsterWallCollision(monster);
+
+        // Implement smart wall avoidance for vampire and other monsters
+        this.handleMonsterWallAvoidance(monster, oldX, oldY);
 
         // Collisions: Players
         this.players.forEach((player) => {
@@ -521,6 +531,144 @@ export class GameState extends Schema {
 
     private monsterRemove = (id: string) => {
         this.monsters.delete(id);
+    };
+
+    private handleMonsterWallCollision = (monster: Monster) => {
+        // Check if monster collides with walls and correct position
+        if (this.walls.collidesWithCircle(monster.body, 'full')) {
+            // Get corrected position from collision system
+            const correctedBody = this.walls.correctWithCircle(monster.body);
+
+            // Apply correction to monster position
+            monster.x = correctedBody.x;
+            monster.y = correctedBody.y;
+
+            console.log(`Monster collision corrected: ${monster.type} at (${monster.x.toFixed(1)}, ${monster.y.toFixed(1)})`);
+        }
+    };
+
+    private handleMonsterWallAvoidance = (monster: Monster, oldX: number, oldY: number) => {
+        // Check if monster moved into a wall
+        if (this.walls.collidesWithCircle(monster.body, 'full')) {
+            // Monster hit a wall, implement wall avoidance logic
+
+            // Calculate avoidance direction based on monster type
+            switch (monster.type) {
+                case 'vampire':
+                    this.handleVampireWallAvoidance(monster, oldX, oldY);
+                    break;
+                case 'bat':
+                    this.handleBatWallAvoidance(monster, oldX, oldY);
+                    break;
+                case 'aggressive':
+                    this.handleAggressiveWallAvoidance(monster, oldX, oldY);
+                    break;
+                case 'fast':
+                    this.handleFastWallAvoidance(monster, oldX, oldY);
+                    break;
+                case 'boss':
+                    this.handleBossWallAvoidance(monster, oldX, oldY);
+                    break;
+                default:
+                    // Default wall avoidance - move back to old position
+                    monster.x = oldX;
+                    monster.y = oldY;
+                    break;
+            }
+        }
+    };
+
+    private handleVampireWallAvoidance = (monster: Monster, oldX: number, oldY: number) => {
+        // Vampire is smart and ethereal - tries to find alternative path
+        const avoidanceDistance = monster.radius * 2;
+
+        // Try moving perpendicular to the wall
+        const testPositions = [
+            { x: monster.x + avoidanceDistance, y: monster.y }, // Right
+            { x: monster.x - avoidanceDistance, y: monster.y }, // Left
+            { x: monster.x, y: monster.y + avoidanceDistance }, // Down
+            { x: monster.x, y: monster.y - avoidanceDistance }, // Up
+        ];
+
+        // Find first collision-free position
+        for (const pos of testPositions) {
+            const testBody = new Geometry.CircleBody(pos.x, pos.y, monster.radius);
+            if (!this.walls.collidesWithCircle(testBody, 'full')) {
+                monster.x = pos.x;
+                monster.y = pos.y;
+                console.log(`Vampire avoided wall by moving to (${pos.x.toFixed(1)}, ${pos.y.toFixed(1)})`);
+                return;
+            }
+        }
+
+        // If no clear path, move back to old position
+        monster.x = oldX;
+        monster.y = oldY;
+    };
+
+    private handleBatWallAvoidance = (monster: Monster, oldX: number, oldY: number) => {
+        // Bats are agile flyers - they can often navigate around obstacles
+        const avoidanceAngle = Math.random() * Math.PI * 2;
+        const avoidanceDistance = monster.radius * 1.5;
+
+        const newX = monster.x + Math.cos(avoidanceAngle) * avoidanceDistance;
+        const newY = monster.y + Math.sin(avoidanceAngle) * avoidanceDistance;
+
+        const testBody = new Geometry.CircleBody(newX, newY, monster.radius);
+        if (!this.walls.collidesWithCircle(testBody, 'full')) {
+            monster.x = newX;
+            monster.y = newY;
+            console.log(`Bat avoided wall by flying to (${newX.toFixed(1)}, ${newY.toFixed(1)})`);
+        } else {
+            monster.x = oldX;
+            monster.y = oldY;
+        }
+    };
+
+    private handleAggressiveWallAvoidance = (monster: Monster, oldX: number, oldY: number) => {
+        // Aggressive monsters smash through or go around
+        const smashChance = 0.3; // 30% chance to try smashing through
+
+        if (Math.random() < smashChance) {
+            // Try to push through (might fail due to collision correction)
+            console.log(`Aggressive monster trying to smash through wall`);
+        } else {
+            // Go around like vampire but more aggressively
+            this.handleVampireWallAvoidance(monster, oldX, oldY);
+        }
+    };
+
+    private handleFastWallAvoidance = (monster: Monster, oldX: number, oldY: number) => {
+        // Fast monsters are agile and can quickly change direction
+        const quickTurnAngle = (Math.random() - 0.5) * Math.PI; // Random direction change
+        const quickTurnDistance = monster.radius * 1.2;
+
+        const newX = monster.x + Math.cos(quickTurnAngle) * quickTurnDistance;
+        const newY = monster.y + Math.sin(quickTurnAngle) * quickTurnDistance;
+
+        const testBody = new Geometry.CircleBody(newX, newY, monster.radius);
+        if (!this.walls.collidesWithCircle(testBody, 'full')) {
+            monster.x = newX;
+            monster.y = newY;
+            console.log(`Fast monster dodged wall by moving to (${newX.toFixed(1)}, ${newY.toFixed(1)})`);
+        } else {
+            monster.x = oldX;
+            monster.y = oldY;
+        }
+    };
+
+    private handleBossWallAvoidance = (monster: Monster, oldX: number, oldY: number) => {
+        // Boss is powerful and can sometimes smash through walls
+        const smashThroughChance = 0.5; // 50% chance to smash through
+
+        if (Math.random() < smashThroughChance) {
+            // Boss is strong enough to push through some obstacles
+            console.log(`Boss smashing through wall!`);
+            // Let collision correction handle the actual movement
+        } else {
+            // Use vampire-like intelligence to find path around
+            this.handleVampireWallAvoidance(monster, oldX, oldY);
+        }
     };
 
     private monstersClear = () => {

@@ -1124,8 +1124,17 @@ export class Monster extends Circle {
     }
 
     move(speed: number, rotation: number) {
-        this.x += Math.cos(rotation) * speed;
-        this.y += Math.sin(rotation) * speed;
+        // Store old position for potential rollback
+        const oldX = this.x;
+        const oldY = this.y;
+
+        // Calculate new position
+        const newX = this.x + Math.cos(rotation) * speed;
+        const newY = this.y + Math.sin(rotation) * speed;
+
+        // Check if new position would cause collision (this will be handled by GameState)
+        this.x = newX;
+        this.y = newY;
     }
 
     attack(playerX: number, playerY: number) {
