@@ -76,6 +76,5 @@ export const archerSpriteSheets = {
 
 export {
     playerDeadTextures,
-    playerIdleTextures,
-    createFramesFromSpriteSheetAtRuntime
+    playerIdleTextures
 };
