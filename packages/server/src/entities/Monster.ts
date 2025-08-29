@@ -178,36 +178,68 @@ export class Monster extends Circle {
     }
 
     private executeSmartChaseAI(player: Player, distance: number) {
-        const closeDistance = 50; // Distance at which monster can attack
+        const attackDistance = Constants.MONSTER_ATTACK_DISTANCE; // Distance at which monster can attack
         const speed = this.getChaseSpeed();
         const jerkyMultiplier = this.getJerkyMovementMultiplier();
 
         switch (this.monsterType) {
             case 'bat':
-                // Basic bat: approaches to attack distance
-                this.executeBasicChase(player, distance, closeDistance, speed * jerkyMultiplier);
+                // Basic bat: approaches to attack distance and ALWAYS uses dash on attack
+                this.executeBatChase(player, distance, attackDistance, speed * jerkyMultiplier);
                 break;
 
             case 'aggressive':
                 // Aggressive: approaches quickly to attack
-                this.executeAggressiveChase(player, distance, closeDistance, speed * jerkyMultiplier);
+                this.executeAggressiveChase(player, distance, attackDistance, speed * jerkyMultiplier);
                 break;
 
             case 'fast':
                 // Fast: circles and approaches to attack
-                this.executeFastChase(player, distance, closeDistance, speed * jerkyMultiplier);
+                this.executeFastChase(player, distance, attackDistance, speed * jerkyMultiplier);
                 break;
 
             default:
-                this.executeBasicChase(player, distance, closeDistance, speed * jerkyMultiplier);
+                this.executeBasicChase(player, distance, attackDistance, speed * jerkyMultiplier);
                 break;
+        }
+    }
+
+    private executeBatChase(player: Player, distance: number, attackDistance: number, moveSpeed: number) {
+        if (distance > attackDistance + 15) {
+            // Move toward player with varied approach angle for realism
+            const directAngle = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+            const approachVariation = (Math.sin(Date.now() * 0.005) * 0.3); // Slight angle variation
+            this.rotation = directAngle + approachVariation;
+            this.move(moveSpeed, this.rotation);
+        } else if (distance > attackDistance) {
+            // Close to attack distance - prepare for dash attack
+            this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+            this.move(moveSpeed * 0.5, this.rotation);
+
+            // Bat ALWAYS uses dash when attacking
+            if (distance <= attackDistance && this.canAttack) {
+                this.startDash(player.x, player.y);
+            }
+        } else if (distance < attackDistance - 3) {
+            // Too close, move away slightly
+            this.rotation = Maths.calculateAngle(this.x, this.y, player.x, player.y);
+            this.move(moveSpeed * 0.4, this.rotation);
+        } else {
+            // At attack distance - can attack when cooldown allows
+            // Small varied movement to approach from different angles
+            if (Math.random() < 0.03) {
+                const variedAngle = Maths.calculateAngle(player.x, player.y, this.x, this.y) + (Math.random() - 0.5) * 0.5;
+                this.move(moveSpeed * 0.2, variedAngle);
+            }
         }
     }
 
     private executeBasicChase(player: Player, distance: number, attackDistance: number, moveSpeed: number) {
         if (distance > attackDistance + 10) {
-            // Move toward player to get in attack range
-            this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+            // Move toward player with varied approach for realism
+            const directAngle = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+            const approachVariation = (Math.sin(Date.now() * 0.003) * 0.2); // Subtle angle variation
+            this.rotation = directAngle + approachVariation;
             this.move(moveSpeed, this.rotation);
         } else if (distance < attackDistance - 5) {
             // Too close, move away slightly
@@ -292,65 +324,102 @@ export class Monster extends Circle {
 
             // CRITICAL: Maintain safe distance during cooldown (150px)
             if (distanceToPlayer < safeDistance) {
-                // Emergency retreat - move away from player immediately
+                // Emergency retreat - move away from player immediately with varied direction
                 const angle = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+                const directionVariation = (Math.random() - 0.5) * 0.5; // Add randomness to retreat direction
                 const retreatSpeed = this.monsterType === 'fast' ? 2.5 : 2.0;
-                this.move(retreatSpeed, angle);
+                this.move(retreatSpeed, angle + directionVariation);
                 return;
             }
 
             // Fly around in different directions while maintaining safe distance
-            this.executeCooldownFlight(player, distanceToPlayer, safeDistance);
+            // Don't stick to fixed attack position - be more dynamic
+            this.executeDynamicCooldownFlight(player, distanceToPlayer, safeDistance);
         } else {
-            // Player disconnected/died, stay near attack position
-            this.stayNearAttackPosition();
+            // Player disconnected/died, fly freely
+            this.executeFreeFlight();
         }
     }
 
-    private executeCooldownFlight(player: Player, distanceToPlayer: number, safeDistance: number) {
+    private executeDynamicCooldownFlight(player: Player, distanceToPlayer: number, safeDistance: number) {
         const time = Date.now() * 0.001; // Convert to seconds
 
         switch (this.monsterType) {
             case 'bat':
-                this.executeBasicCooldownFlight(player, distanceToPlayer, safeDistance, time);
+                this.executeDynamicBatFlight(player, distanceToPlayer, safeDistance, time);
                 break;
             case 'aggressive':
-                this.executeAggressiveCooldownFlight(player, distanceToPlayer, safeDistance, time);
+                this.executeDynamicAggressiveFlight(player, distanceToPlayer, safeDistance, time);
                 break;
             case 'fast':
-                this.executeFastCooldownFlight(player, distanceToPlayer, safeDistance, time);
+                this.executeDynamicFastFlight(player, distanceToPlayer, safeDistance, time);
                 break;
             default:
-                this.executeBasicCooldownFlight(player, distanceToPlayer, safeDistance, time);
+                this.executeDynamicBasicFlight(player, distanceToPlayer, safeDistance, time);
                 break;
         }
     }
 
-    private executeBasicCooldownFlight(player: Player, distanceToPlayer: number, safeDistance: number, time: number) {
-        // Basic bat flies in simple patterns around safe distance
-        const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-        const flightOffset = Math.sin(time * 0.5) * 0.4; // Slow circular motion
-        const verticalOffset = Math.cos(time * 0.3) * 0.2;
-
-        this.move(0.8, angleToPlayer + flightOffset + verticalOffset);
+    private executeFreeFlight() {
+        // Free flight when no target - just fly around randomly
+        const time = Date.now() * 0.001;
+        const randomAngle = Math.sin(time * 0.3) * Math.PI * 2;
+        this.move(0.8, randomAngle);
     }
 
-    private executeAggressiveCooldownFlight(player: Player, distanceToPlayer: number, safeDistance: number, time: number) {
-        // Aggressive monsters fly more aggressively during cooldown
+    private executeDynamicBasicFlight(player: Player, distanceToPlayer: number, safeDistance: number, time: number) {
+        // Dynamic flight pattern - doesn't stick to fixed positions
         const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-        const aggressiveOffset = Math.sin(time * 1.0) * 0.6; // More aggressive motion
-        const zigzagOffset = Math.sin(time * 2.0) * 0.3; // Zigzag pattern
 
-        this.move(1.2, angleToPlayer + aggressiveOffset + zigzagOffset);
+        // Complex flight pattern with multiple harmonics
+        const primaryMotion = Math.sin(time * 0.5) * 0.5;
+        const secondaryMotion = Math.cos(time * 0.7) * 0.3;
+        const tertiaryMotion = Math.sin(time * 1.1) * 0.2;
+        const randomMotion = Math.sin(time * 0.3 + Math.random()) * 0.1;
+
+        const totalOffset = primaryMotion + secondaryMotion + tertiaryMotion + randomMotion;
+        this.move(0.9, angleToPlayer + totalOffset);
     }
 
-    private executeFastCooldownFlight(player: Player, distanceToPlayer: number, safeDistance: number, time: number) {
-        // Fast monsters fly erratically during cooldown
+    private executeDynamicBatFlight(player: Player, distanceToPlayer: number, safeDistance: number, time: number) {
+        // Bats have more fluttery, varied flight patterns
         const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-        const fastOffset = Math.sin(time * 1.5) * 0.8; // Fast erratic motion
-        const chaoticOffset = Math.sin(time * 3.0) * 0.4; // Chaotic element
 
-        this.move(1.5, angleToPlayer + fastOffset + chaoticOffset);
+        // Fluttery motion with quick changes
+        const flutterMotion = Math.sin(time * 2.0) * 0.4;
+        const directionalMotion = Math.cos(time * 0.8) * 0.3;
+        const erraticMotion = Math.sin(time * 3.0) * 0.2;
+        const microMotion = Math.sin(time * 5.0) * 0.1; // Very fast micro-movements
+
+        const totalOffset = flutterMotion + directionalMotion + erraticMotion + microMotion;
+        this.move(1.0, angleToPlayer + totalOffset);
+    }
+
+    private executeDynamicAggressiveFlight(player: Player, distanceToPlayer: number, safeDistance: number, time: number) {
+        // Aggressive monsters have bold, sweeping flight patterns
+        const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+
+        // Bold sweeping motions
+        const sweepMotion = Math.sin(time * 0.6) * 0.7;
+        const chargeMotion = Math.cos(time * 0.9) * 0.4;
+        const aggressiveMotion = Math.sin(time * 1.5) * 0.3;
+
+        const totalOffset = sweepMotion + chargeMotion + aggressiveMotion;
+        this.move(1.3, angleToPlayer + totalOffset);
+    }
+
+    private executeDynamicFastFlight(player: Player, distanceToPlayer: number, safeDistance: number, time: number) {
+        // Fast monsters have quick, darting flight patterns
+        const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+
+        // Quick darting motions
+        const dartMotion = Math.sin(time * 2.5) * 0.6;
+        const zigzagMotion = Math.cos(time * 1.8) * 0.4;
+        const burstMotion = Math.sin(time * 4.0) * 0.3;
+        const unpredictableMotion = Math.sin(time * 0.7 + Math.sin(time * 1.3)) * 0.2;
+
+        const totalOffset = dartMotion + zigzagMotion + burstMotion + unpredictableMotion;
+        this.move(1.6, angleToPlayer + totalOffset);
     }
 
 

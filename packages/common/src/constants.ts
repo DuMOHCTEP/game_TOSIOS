@@ -54,6 +54,9 @@ export const MONSTER_ATTACK_KNOCKBACK_DISTANCE = 150; // pixels
 export const MONSTER_ATTACK_KNOCKBACK_FORCE = 10.0; // stronger force to reach 150px
 export const MONSTER_ATTACK_MIN_DISTANCE = 150; // minimum distance during cooldown
 
+// Attack distance settings
+export const MONSTER_ATTACK_DISTANCE = 25; // pixels (reduced from 50)
+
 // Aggressive Monster (new type)
 export const MONSTER_AGGRESSIVE_SPEED_PATROL = 1.0;
 export const MONSTER_AGGRESSIVE_SPEED_CHASE = 2.0;
