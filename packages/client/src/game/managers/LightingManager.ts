@@ -35,24 +35,21 @@ export class LightingManager {
     private initLighting() {
         console.log('🏮 LightingManager: Инициализация системы освещения подземелья');
 
-        // Создаем слой окружающей темноты
+        // Создаем полноэкранный слой темноты
         this.darknessLayer.beginFill(0x000000, this.darknessAlpha);
-        this.darknessLayer.drawRect(0, 0, 2000, 2000); // Большая область
+        this.darknessLayer.drawRect(-5000, -5000, 10000, 10000); // Очень большая область
         this.darknessLayer.endFill();
 
-        // Создаем слой окружающего света (амбиент)
-        this.ambientLightLayer.beginFill(0x000000, 1 - this.ambientLightLevel);
-        this.ambientLightLayer.drawRect(0, 0, 2000, 2000);
-        this.ambientLightLayer.endFill();
+        // Создаем маску света (изначально пустая)
+        this.lightMask.beginFill(0xffffff, 1.0);
+        this.lightMask.drawRect(-5000, -5000, 10000, 10000); // Прозрачная маска
+        this.lightMask.endFill();
 
         // Добавляем слои в контейнер
-        this.container.addChild(this.ambientLightLayer);
         this.container.addChild(this.darknessLayer);
-        this.container.addChild(this.lightMask);
 
-        // Настраиваем маски
+        // Применяем маску к слою темноты
         this.darknessLayer.mask = this.lightMask;
-        this.ambientLightLayer.mask = this.lightMask;
     }
 
     /**
@@ -62,21 +59,24 @@ export class LightingManager {
         // Очищаем предыдущую маску света
         this.lightMask.clear();
 
-        // Создаем круг света вокруг игрока
-        this.lightMask.beginFill(0xffffff, this.lightIntensity);
+        // Сначала создаем полностью темную маску (ничего не видно)
+        this.lightMask.beginFill(0x000000, 1.0);
+        this.lightMask.drawRect(-5000, -5000, 10000, 10000);
+        this.lightMask.endFill();
+
+        // Затем вырезаем области света (делаем их прозрачными в маске)
+        this.lightMask.beginFill(0xffffff, 1.0);
         this.lightMask.drawCircle(playerX, playerY, this.playerLightRadius);
         this.lightMask.endFill();
 
-        // Добавляем яркий центр
+        // Добавляем яркий центр (более яркий свет)
         this.lightMask.beginFill(0xffffff, 1.0);
         this.lightMask.drawCircle(playerX, playerY, this.playerLightRadius * 0.3);
         this.lightMask.endFill();
 
-        // Позиционируем слои темноты относительно игрока
+        // Позиционируем слой темноты так, чтобы он следовал за камерой
         this.darknessLayer.x = -playerX + screenWidth / 2;
         this.darknessLayer.y = -playerY + screenHeight / 2;
-        this.ambientLightLayer.x = this.darknessLayer.x;
-        this.ambientLightLayer.y = this.darknessLayer.y;
     }
 
     /**
@@ -86,10 +86,10 @@ export class LightingManager {
         if (!Constants.MONSTER_GLOW_ENABLED) return;
 
         const monsterLightRadius = Constants.MONSTER_LIGHT_RADIUS;
-        const lightIntensity = Math.max(0.2, 1.0 - (distanceToPlayer / (this.playerLightRadius + monsterLightRadius)));
 
-        this.lightMask.beginFill(Constants.MONSTER_GLOW_COLOR, lightIntensity * 0.6); // Monster glow
-        this.lightMask.drawCircle(monsterX, monsterY, monsterLightRadius * 0.6);
+        // Вырезаем область света от монстра в маске
+        this.lightMask.beginFill(0xffffff, 0.6); // Monster light area
+        this.lightMask.drawCircle(monsterX, monsterY, monsterLightRadius);
         this.lightMask.endFill();
     }
 
@@ -102,24 +102,25 @@ export class LightingManager {
         const flashRadius = radius || Constants.BULLET_FLASH_RADIUS;
         const flashDuration = duration || Constants.BULLET_FLASH_DURATION;
 
-        const flash = new Graphics();
-        flash.beginFill(0xffffff, 0.9); // Bright white flash
-        flash.drawCircle(x, y, flashRadius);
-        flash.endFill();
+        // Добавляем временную область света в маске
+        this.lightMask.beginFill(0xffffff, 1.0);
+        this.lightMask.drawCircle(x, y, flashRadius);
+        this.lightMask.endFill();
 
-        // Add inner bright core
-        flash.beginFill(0xffffff, 1.0);
-        flash.drawCircle(x, y, flashRadius * 0.3);
-        flash.endFill();
+        // Добавляем яркий центр
+        this.lightMask.beginFill(0xffffff, 1.0);
+        this.lightMask.drawCircle(x, y, flashRadius * 0.3);
+        this.lightMask.endFill();
 
-        this.container.addChild(flash);
-
-        // Remove flash after duration
+        // Удаляем вспышку через время (перерисовываем маску без вспышки)
         setTimeout(() => {
-            if (flash.parent) {
-                flash.parent.removeChild(flash);
-            }
+            this.refreshLightMask();
         }, flashDuration);
+    }
+
+    private refreshLightMask() {
+        // Этот метод будет вызываться для обновления маски после вспышек
+        // Пока оставляем пустым, так как маска обновляется каждый кадр в updatePlayerLight
     }
 
     /**

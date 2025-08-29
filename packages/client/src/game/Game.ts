@@ -169,8 +169,10 @@ export class Game {
     private updateLightingSystem = () => {
         if (!Constants.LIGHTING_ENABLED || !this.me || !this.lightingManager) return;
 
-        const playerX = this.me.x;
-        const playerY = this.me.y;
+        // Получаем позицию игрока в мировых координатах
+        const playerWorldPos = this.viewport.toWorld({ x: this.app.screen.width / 2, y: this.app.screen.height / 2 });
+        const playerX = playerWorldPos.x;
+        const playerY = playerWorldPos.y;
 
         // Update player light position
         this.lightingManager.updatePlayerLight(playerX, playerY, this.app.screen.width, this.app.screen.height);
