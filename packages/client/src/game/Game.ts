@@ -565,6 +565,13 @@ export class Game {
             this.me.kills = attributes.kills;
             this.me.team = attributes.team;
 
+            // Update character type if changed
+            if (attributes.characterType && attributes.characterType !== this.me.characterType) {
+                this.me.characterType = attributes.characterType;
+                this.me.updateTexturesForCharacter(attributes.characterType);
+                this.me.updateWeaponForCharacter(attributes.characterType);
+            }
+
             if (attributes.ack !== this.me.ack) {
                 this.me.ack = attributes.ack;
 

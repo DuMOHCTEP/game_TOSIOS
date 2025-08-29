@@ -71,11 +71,14 @@ export class Player extends BaseEntity {
 
     // Init
     constructor(player: Models.PlayerJSON, isGhost: boolean, particlesContainer?: Container) {
+        // Initialize character type first
+        this._characterType = player.characterType || Constants.CHARACTER_DEFAULT;
+
         super({
             x: player.x,
             y: player.y,
             radius: player.radius,
-            textures: getTexture(player.lives, player.characterType || 'warrior'),
+            textures: getTexture(player.lives, this._characterType),
             zIndex: ZINDEXES.PLAYER,
         });
 
@@ -129,7 +132,6 @@ export class Player extends BaseEntity {
         this.maxLives = player.maxLives;
         this.kills = player.kills;
         this.team = player.team;
-        this._characterType = player.characterType || 'warrior';
         this.isGhost = isGhost;
 
         // Ghost
@@ -404,6 +406,29 @@ export class Player extends BaseEntity {
 
     get lastShootAt() {
         return this._lastShootAt;
+    }
+
+    get characterType() {
+        return this._characterType;
+    }
+
+    set characterType(value: CharacterType) {
+        this._characterType = value;
+    }
+
+    // Update textures when character type changes
+    updateTexturesForCharacter(characterType: CharacterType) {
+        const newTextures = getTexture(this._lives, characterType);
+        this.textures = newTextures;
+        if (this.sprite && newTextures.length > 0) {
+            this.sprite.texture = newTextures[0]; // Update current texture
+        }
+    }
+
+    // Update weapon when character type changes
+    updateWeaponForCharacter(characterType: CharacterType) {
+        const weaponTexture = characterType === 'archer' ? WeaponTextures.arrow : WeaponTextures.staff;
+        this._weaponSprite.texture = weaponTexture;
     }
 
     get isAlive() {
