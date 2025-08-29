@@ -771,10 +771,14 @@ export class Monster extends Circle {
 
     private getChaseSpeed(): number {
         switch (this.monsterType) {
+            case 'bat':
+                return Constants.MONSTER_SPEED_CHASE; // Bats use regular speed
             case 'aggressive':
                 return Constants.MONSTER_AGGRESSIVE_SPEED_CHASE;
             case 'fast':
                 return Constants.MONSTER_FAST_SPEED_CHASE;
+            case 'boss':
+                return Constants.MONSTER_BOSS_SPEED_CHASE; // Boss is very fast
             default:
                 return Constants.MONSTER_SPEED_CHASE;
         }
@@ -782,10 +786,14 @@ export class Monster extends Circle {
 
     private getPatrolSpeed(): number {
         switch (this.monsterType) {
+            case 'bat':
+                return Constants.MONSTER_SPEED_PATROL; // Bats use regular patrol speed
             case 'aggressive':
                 return Constants.MONSTER_AGGRESSIVE_SPEED_PATROL;
             case 'fast':
                 return Constants.MONSTER_FAST_SPEED_PATROL;
+            case 'boss':
+                return Constants.MONSTER_BOSS_SPEED_PATROL; // Boss patrols fast
             default:
                 return Constants.MONSTER_SPEED_PATROL;
         }
@@ -793,12 +801,42 @@ export class Monster extends Circle {
 
     private getAttackCooldown(): number {
         switch (this.monsterType) {
+            case 'bat':
+                return Constants.MONSTER_BAT_ATTACK_BACKOFF; // 1 second for bats
             case 'aggressive':
                 return Constants.MONSTER_AGGRESSIVE_ATTACK_BACKOFF;
             case 'fast':
                 return Constants.MONSTER_FAST_ATTACK_BACKOFF;
+            case 'boss':
+                return Constants.MONSTER_BOSS_ATTACK_BACKOFF; // 1 second for boss
             default:
                 return Constants.MONSTER_ATTACK_BACKOFF;
+        }
+    }
+
+    private getDashCooldown(): number {
+        switch (this.monsterType) {
+            case 'bat':
+                return Constants.MONSTER_BAT_DASH_COOLDOWN; // 3 seconds for bats
+            case 'fast':
+                return Constants.MONSTER_FAST_DASH_COOLDOWN;
+            case 'boss':
+                return Constants.MONSTER_BOSS_DASH_COOLDOWN; // 2 seconds for boss
+            default:
+                return Constants.MONSTER_FAST_DASH_COOLDOWN; // Default fallback
+        }
+    }
+
+    private getDashForce(): number {
+        switch (this.monsterType) {
+            case 'bat':
+                return Constants.MONSTER_BAT_DASH_FORCE; // Strong dash for bats
+            case 'fast':
+                return Constants.MONSTER_FAST_DASH_FORCE;
+            case 'boss':
+                return Constants.MONSTER_BOSS_DASH_FORCE; // Very strong for boss
+            default:
+                return Constants.MONSTER_FAST_DASH_FORCE; // Default fallback
         }
     }
 
@@ -812,7 +850,7 @@ export class Monster extends Circle {
     }
 
     private canDash(): boolean {
-        return !this.isDashing && Date.now() - this.lastDashAt > Constants.MONSTER_FAST_DASH_COOLDOWN;
+        return !this.isDashing && Date.now() - this.lastDashAt > this.getDashCooldown();
     }
 
     private startDash(targetX: number, targetY: number) {
@@ -820,8 +858,9 @@ export class Monster extends Circle {
         this.lastDashAt = Date.now();
 
         const angle = Maths.calculateAngle(targetX, targetY, this.x, this.y);
-        this.dashDirectionX = Math.cos(angle) * Constants.MONSTER_FAST_DASH_FORCE;
-        this.dashDirectionY = Math.sin(angle) * Constants.MONSTER_FAST_DASH_FORCE;
+        const dashForce = this.getDashForce();
+        this.dashDirectionX = Math.cos(angle) * dashForce;
+        this.dashDirectionY = Math.sin(angle) * dashForce;
     }
 
     public applyKnockback(fromX: number, fromY: number, isAttackKnockback: boolean = false) {

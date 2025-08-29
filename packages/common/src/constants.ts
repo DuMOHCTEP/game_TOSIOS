@@ -60,6 +60,13 @@ export const BOSS_ATTACK_DISTANCE = 60; // pixels (boss has much larger attack r
 export const BOSS_CHASE_DISTANCE = 300; // pixels (boss pursues from much further)
 export const BOSS_TARGET_SWITCH_DISTANCE = 150; // pixels (distance to switch targets)
 
+// Bat Monster (flying type)
+export const MONSTER_BAT_ATTACK_BACKOFF = 1000; // 1 second - quick bite attacks
+export const MONSTER_BAT_DASH_COOLDOWN = 3000; // 3 seconds - dash cooldown
+export const MONSTER_BAT_DASH_FORCE = 12.0; // Strong dash for flying attack
+export const MONSTER_BAT_KNOCKBACK_FORCE = 8.0;
+export const MONSTER_BAT_KNOCKBACK_DURATION = 400; // ms
+
 // Aggressive Monster (new type)
 export const MONSTER_AGGRESSIVE_SPEED_PATROL = 1.0;
 export const MONSTER_AGGRESSIVE_SPEED_CHASE = 2.0;
@@ -75,11 +82,13 @@ export const MONSTER_FAST_DASH_FORCE = 8.0;
 export const MONSTER_FAST_DASH_COOLDOWN = 1500; // ms
 
 // Boss Monster (legendary type)
-export const MONSTER_BOSS_SIZE = 48; // Larger than regular monsters
+export const MONSTER_BOSS_SIZE = 62; // Larger than regular monsters (30% wider)
 export const MONSTER_BOSS_LIVES = 20; // Much more HP than regular monsters
 export const MONSTER_BOSS_SPEED_PATROL = 2.5; // Much faster patrol
 export const MONSTER_BOSS_SPEED_CHASE = 4.0; // Very fast chase speed
 export const MONSTER_BOSS_ATTACK_BACKOFF = 1000; // 1 second cooldown
+export const MONSTER_BOSS_DASH_COOLDOWN = 2000; // 2 seconds - dash cooldown for boss
+export const MONSTER_BOSS_DASH_FORCE = 15.0; // Very strong dash for boss
 export const MONSTER_BOSS_ABILITY_COOLDOWN = 5000; // Special ability cooldown
 
 // Boss Abilities
