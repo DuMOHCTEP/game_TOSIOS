@@ -406,34 +406,35 @@ export class Monster extends Circle {
 
         // Boss has complex behavior patterns
         if (distance > attackDistance + 100) {
-            // Long range - slow majestic approach
+            // Long range - fast majestic approach
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const majesticOffset = Math.sin(time * 0.3) * 0.3;
-            this.move(moveSpeed * 0.7, angleToPlayer + majesticOffset);
+            const majesticOffset = Math.sin(time * 0.5) * 0.2;
+            this.move(moveSpeed * 1.2, angleToPlayer + majesticOffset);
         } else if (distance > attackDistance + 50) {
-            // Medium range - circling and ability usage
+            // Medium range - fast circling and ability usage
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const circleOffset = Math.sin(time * 0.8) * 0.5;
-            this.move(moveSpeed * 0.5, angleToPlayer + circleOffset);
+            const circleOffset = Math.sin(time * 1.2) * 0.3;
+            this.move(moveSpeed * 0.9, angleToPlayer + circleOffset);
 
             // Try to use abilities
             if (this.canUseAbility()) {
                 this.useRandomAbility(player);
             }
         } else if (distance > attackDistance) {
-            // Close range - aggressive circling before attack
+            // Close range - very aggressive fast approach
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const aggressiveOffset = Math.sin(time * 1.2) * 0.4;
-            this.move(moveSpeed * 0.3, angleToPlayer + aggressiveOffset);
+            const aggressiveOffset = Math.sin(time * 1.5) * 0.2;
+            this.move(moveSpeed * 1.5, angleToPlayer + aggressiveOffset);
         } else if (distance < attackDistance - 10) {
-            // Too close - strategic retreat
+            // Too close - fast strategic retreat
             const retreatAngle = Maths.calculateAngle(this.x, this.y, player.x, player.y);
-            this.move(moveSpeed * 1.5, retreatAngle);
+            this.move(moveSpeed * 2.0, retreatAngle);
         } else {
-            // At attack distance - perform attack pattern
+            // At attack distance - perform DASH attack pattern
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const attackOffset = Math.sin(time * 2.0) * 0.2;
-            this.move(moveSpeed * 0.1, angleToPlayer + attackOffset);
+
+            // Boss always dashes directly at the target with maximum speed
+            this.move(moveSpeed * 2.0, angleToPlayer); // Double speed dash attack
 
             // Use ability instead of regular attack sometimes
             if (Math.random() < 0.3 && this.canUseAbility()) {

@@ -77,9 +77,9 @@ export const MONSTER_FAST_DASH_COOLDOWN = 1500; // ms
 // Boss Monster (legendary type)
 export const MONSTER_BOSS_SIZE = 48; // Larger than regular monsters
 export const MONSTER_BOSS_LIVES = 20; // Much more HP than regular monsters
-export const MONSTER_BOSS_SPEED_PATROL = 0.8;
-export const MONSTER_BOSS_SPEED_CHASE = 1.8;
-export const MONSTER_BOSS_ATTACK_BACKOFF = 1500; // Faster attacks
+export const MONSTER_BOSS_SPEED_PATROL = 2.5; // Much faster patrol
+export const MONSTER_BOSS_SPEED_CHASE = 4.0; // Very fast chase speed
+export const MONSTER_BOSS_ATTACK_BACKOFF = 1000; // 1 second cooldown
 export const MONSTER_BOSS_ABILITY_COOLDOWN = 5000; // Special ability cooldown
 
 // Boss Abilities
