@@ -1,5 +1,5 @@
 import { BaseEntity } from './';
-import { Effects } from '../sprites';
+import { Effects, Animations } from '../sprites';
 import { Graphics } from 'pixi.js';
 import { Models, Constants } from '@tosios/common';
 import { MonstersTextures } from '../assets/images';
@@ -51,6 +51,10 @@ export class Monster extends BaseEntity {
 
     // Target indicator
     private _targetIndicator: Graphics;
+
+    // Animation tracking
+    private _currentAnimationId: string | null = null;
+    private _isAnimating: boolean = false;
 
     // Init
     constructor(monster: Models.MonsterJSON) {
@@ -130,6 +134,11 @@ export class Monster extends BaseEntity {
         this._attackPositionY = monster.attackPositionY;
         this._targetPlayerId = monster.targetPlayerId;
         this._currentPlayerId = currentPlayerId || null;
+
+        // Handle knockback animation when monster can't attack
+        if (monster.cantAttack && this._targetPlayerId) {
+            this.handleCantAttackKnockback();
+        }
 
         // Update boss-specific properties
         this._isBoss = monster.isBoss;
@@ -502,6 +511,52 @@ export class Monster extends BaseEntity {
             this._targetIndicator.lineTo(0, -radius - 10 + indicatorRadius * 0.5);
 
             console.log(`🎯 TARGET INDICATOR: Monster is targeting YOU!`);
+        }
+    }
+
+    private handleCantAttackKnockback() {
+        if (this._isAnimating) return; // Don't start new animation if already animating
+
+        const knockbackDistance = this.radius * 3; // Knock back 3 radii away
+        const direction = Math.random() * Math.PI * 2; // Random direction
+
+        console.log(`${this._monsterType.toUpperCase()} can't attack - performing knockback!`);
+
+        // Show "can't attack" indicator
+        if (this.container.parent) {
+            Animations.MonsterEffects.cantAttackIndicator(
+                this.container.parent,
+                this.x,
+                this.y,
+                this.radius
+            );
+        }
+
+        // Perform knockback animation
+        this._currentAnimationId = Animations.animateKnockback({
+            duration: 600,
+            startX: this.x,
+            startY: this.y,
+            distance: knockbackDistance,
+            direction: direction,
+            sprite: this.sprite,
+            onComplete: () => {
+                this._isAnimating = false;
+                this._currentAnimationId = null;
+                console.log(`${this._monsterType.toUpperCase()} knockback complete`);
+            }
+        });
+
+        this._isAnimating = true;
+
+        // Show particle effect
+        if (this.container.parent) {
+            Animations.MonsterEffects.knockbackEffect(
+                this.container.parent,
+                this.x,
+                this.y,
+                direction
+            );
         }
     }
 

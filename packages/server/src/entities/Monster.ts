@@ -33,6 +33,9 @@ export class Monster extends Circle {
     @type('string')
     private targetPlayerId: string | null = null;
 
+    @type('boolean')
+    private cantAttack: boolean = false;
+
     // Hidden properties
     private mapWidth: number;
 
@@ -130,6 +133,9 @@ export class Monster extends Circle {
 
         // Handle dash for fast monsters
         this.updateDash();
+
+        // Update cantAttack flag based on current state and cooldowns
+        this.updateCantAttackFlag();
 
         switch (this.state) {
             case 'idle':
@@ -685,6 +691,27 @@ export class Monster extends Circle {
 
         const totalOffset = fluidMotion + etherealMotion + shadowMotion + mistMotion;
         this.move(2.0, angleToPlayer + totalOffset); // Vampires are faster in cooldown
+    }
+
+    private updateCantAttackFlag() {
+        // Determine if monster can't attack based on various conditions
+        const wasCantAttack = this.cantAttack;
+
+        // Monster can't attack if:
+        // 1. Not in chase state
+        // 2. In cooldown from previous attack
+        // 3. Currently dashing (can't attack while dashing)
+        // 4. Target is out of range or doesn't exist
+        const canActuallyAttack = this.canAttack;
+
+        this.cantAttack = !canActuallyAttack && this.state === 'chase' && this.targetPlayerId !== null;
+
+        // Log state changes for debugging
+        if (wasCantAttack !== this.cantAttack) {
+            if (this.cantAttack) {
+                console.log(`${this.type.toUpperCase()} can't attack - will perform knockback`);
+            }
+        }
     }
 
 
