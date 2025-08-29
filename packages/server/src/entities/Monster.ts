@@ -242,6 +242,11 @@ export class Monster extends Circle {
                 this.executeBossChaseWithTargetSwitching(player, distance, attackDistance, speed * jerkyMultiplier);
                 break;
 
+            case 'vampire':
+                // Vampire: fast, elusive with life drain abilities
+                this.executeVampireChase(player, distance, attackDistance, speed * jerkyMultiplier);
+                break;
+
             default:
                 this.executeBasicChase(player, distance, attackDistance, speed * jerkyMultiplier);
                 break;
@@ -376,6 +381,50 @@ export class Monster extends Circle {
 
         // Enhanced boss behavior with more complex patterns
         this.executeBossChase(player, distance, attackDistance, moveSpeed);
+    }
+
+    private executeVampireChase(player: Player, distance: number, attackDistance: number, moveSpeed: number) {
+        const time = Date.now() * 0.001;
+        const currentTime = Date.now();
+
+        // Vampire has unique elusive behavior - fast, unpredictable, and deadly
+        if (distance > attackDistance + 80) {
+            // Long range - very fast approach with erratic movement
+            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+            const erraticOffset = Math.sin(time * 3.0) * 0.6; // Very erratic
+            this.move(moveSpeed * 1.4, angleToPlayer + erraticOffset);
+        } else if (distance > attackDistance + 30) {
+            // Medium range - circling and ability usage
+            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+            const circleOffset = Math.sin(time * 2.5) * 0.8; // Fast circling
+            this.move(moveSpeed * 1.2, angleToPlayer + circleOffset);
+
+            // Try to use vampire abilities
+            if (this.canUseVampireAbility()) {
+                this.useRandomVampireAbility(player);
+            }
+        } else if (distance > attackDistance) {
+            // Close range - very aggressive fast approach
+            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+            const aggressiveOffset = Math.sin(time * 2.0) * 0.4;
+            this.move(moveSpeed * 1.8, angleToPlayer + aggressiveOffset);
+        } else if (distance < attackDistance - 10) {
+            // Too close - quick strategic retreat (vampires are smart)
+            const retreatAngle = Maths.calculateAngle(this.x, this.y, player.x, player.y);
+            this.move(moveSpeed * 2.2, retreatAngle);
+        } else {
+            // At attack distance - use life drain attack
+            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+
+            // Vampire moves erratically while attacking
+            const attackOffset = Math.sin(time * 4.0) * 0.3;
+            this.move(moveSpeed * 0.5, angleToPlayer + attackOffset);
+
+            // Use life drain instead of regular attack
+            if (this.canUseVampireAbility()) {
+                this.useVampireLifeDrain(player);
+            }
+        }
     }
 
     private attemptTargetSwitch(currentPlayer: Player) {
@@ -545,6 +594,9 @@ export class Monster extends Circle {
             case 'fast':
                 this.executeDynamicFastFlight(player, distanceToPlayer, safeDistance, time);
                 break;
+            case 'vampire':
+                this.executeDynamicVampireFlight(player, distanceToPlayer, safeDistance, time);
+                break;
             default:
                 this.executeDynamicBasicFlight(player, distanceToPlayer, safeDistance, time);
                 break;
@@ -611,6 +663,20 @@ export class Monster extends Circle {
 
         const totalOffset = dartMotion + zigzagMotion + burstMotion + unpredictableMotion;
         this.move(1.6, angleToPlayer + totalOffset);
+    }
+
+    private executeDynamicVampireFlight(player: Player, distanceToPlayer: number, safeDistance: number, time: number) {
+        // Vampires have supernatural, fluid flight patterns
+        const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+
+        // Supernatural fluid motions - very smooth but unpredictable
+        const fluidMotion = Math.sin(time * 1.5) * 0.5;
+        const etherealMotion = Math.cos(time * 2.2) * 0.4;
+        const shadowMotion = Math.sin(time * 3.1) * 0.3;
+        const mistMotion = Math.sin(time * 0.8 + Math.sin(time * 1.7)) * 0.2;
+
+        const totalOffset = fluidMotion + etherealMotion + shadowMotion + mistMotion;
+        this.move(2.0, angleToPlayer + totalOffset); // Vampires are faster in cooldown
     }
 
 
@@ -738,6 +804,93 @@ export class Monster extends Circle {
         // In a real implementation, this would spawn additional monsters
     }
 
+    // Vampire ability methods
+    private canUseVampireAbility(): boolean {
+        if (this.monsterType !== 'vampire') return false;
+        return Date.now() - this.lastAbilityUsed >= Constants.MONSTER_VAMPIRE_ABILITY_COOLDOWN;
+    }
+
+    private useRandomVampireAbility(player: Player) {
+        if (this.monsterType !== 'vampire') return;
+
+        const abilities = Constants.VAMPIRE_ABILITY_TYPES;
+        const randomAbility = abilities[Math.floor(Math.random() * abilities.length)];
+
+        this.castVampireAbility(randomAbility, player);
+        this.lastAbilityUsed = Date.now();
+    }
+
+    private castVampireAbility(abilityType: Constants.VampireAbilityType, player: Player) {
+        switch (abilityType) {
+            case 'life_drain':
+                this.useVampireLifeDrain(player);
+                break;
+            case 'mist_form':
+                this.useVampireMistForm();
+                break;
+            case 'bat_swarm':
+                this.useVampireBatSwarm(player);
+                break;
+            case 'hypnosis':
+                this.useVampireHypnosis(player);
+                break;
+        }
+    }
+
+    private useVampireLifeDrain(player: Player) {
+        const distance = Maths.getDistance(this.x, this.y, player.x, player.y);
+        if (distance <= Constants.MONSTER_VAMPIRE_LIFE_DRAIN_RANGE) {
+            // Life drain successful
+            const damage = Constants.VAMPIRE_LIFE_DRAIN_DAMAGE;
+            const heal = Constants.VAMPIRE_LIFE_DRAIN_HEAL;
+
+            console.log(`🧛 Vampire drains ${damage} life from player and gains ${heal} HP!`);
+
+            // In a real implementation, this would:
+            // 1. Deal damage to player
+            // 2. Heal vampire
+            // 3. Create visual effect
+
+            this.bossHP = Math.min(this.bossMaxHP, this.bossHP + heal);
+        }
+    }
+
+    private useVampireMistForm() {
+        console.log(`🧛 Vampire transforms into mist for ${Constants.VAMPIRE_MIST_DURATION}ms!`);
+
+        // In a real implementation, this would:
+        // 1. Make vampire temporarily intangible
+        // 2. Increase movement speed
+        // 3. Create mist visual effect
+        // 4. Make vampire immune to damage
+
+        // For now, just log the ability usage
+        this.lastAbilityUsed = Date.now();
+    }
+
+    private useVampireBatSwarm(player: Player) {
+        console.log(`🧛 Vampire summons ${Constants.VAMPIRE_BAT_SWARM_COUNT} bats to attack!`);
+
+        // In a real implementation, this would:
+        // 1. Spawn temporary bat monsters
+        // 2. Make them attack the player
+        // 3. Bats disappear after short time
+
+        this.lastAbilityUsed = Date.now();
+    }
+
+    private useVampireHypnosis(player: Player) {
+        const distance = Maths.getDistance(this.x, this.y, player.x, player.y);
+        if (distance <= Constants.VAMPIRE_HYPNOSIS_RANGE) {
+            console.log(`🧛 Vampire hypnotizes player for ${Constants.VAMPIRE_HYPNOSIS_DURATION}ms!`);
+
+            // In a real implementation, this would:
+            // 1. Stun the player temporarily
+            // 2. Create hypnosis visual effect
+            // 3. Prevent player from moving/shooting
+        }
+    }
+
     // New monster mechanics
     private updateKnockback() {
         if (Date.now() < this.knockbackUntil) {
@@ -779,6 +932,8 @@ export class Monster extends Circle {
                 return Constants.MONSTER_FAST_SPEED_CHASE;
             case 'boss':
                 return Constants.MONSTER_BOSS_SPEED_CHASE; // Boss is very fast
+            case 'vampire':
+                return Constants.MONSTER_VAMPIRE_SPEED_CHASE; // Vampire is extremely fast
             default:
                 return Constants.MONSTER_SPEED_CHASE;
         }
@@ -794,6 +949,8 @@ export class Monster extends Circle {
                 return Constants.MONSTER_FAST_SPEED_PATROL;
             case 'boss':
                 return Constants.MONSTER_BOSS_SPEED_PATROL; // Boss patrols fast
+            case 'vampire':
+                return Constants.MONSTER_VAMPIRE_SPEED_PATROL; // Vampire patrols very fast
             default:
                 return Constants.MONSTER_SPEED_PATROL;
         }
@@ -809,6 +966,8 @@ export class Monster extends Circle {
                 return Constants.MONSTER_FAST_ATTACK_BACKOFF;
             case 'boss':
                 return Constants.MONSTER_BOSS_ATTACK_BACKOFF; // 1 second for boss
+            case 'vampire':
+                return Constants.MONSTER_VAMPIRE_ATTACK_BACKOFF; // 1.5 seconds for vampire
             default:
                 return Constants.MONSTER_ATTACK_BACKOFF;
         }
@@ -822,6 +981,8 @@ export class Monster extends Circle {
                 return Constants.MONSTER_FAST_DASH_COOLDOWN;
             case 'boss':
                 return Constants.MONSTER_BOSS_DASH_COOLDOWN; // 2 seconds for boss
+            case 'vampire':
+                return Constants.MONSTER_VAMPIRE_DASH_COOLDOWN; // 1 second for vampire (very fast)
             default:
                 return Constants.MONSTER_FAST_DASH_COOLDOWN; // Default fallback
         }
@@ -835,6 +996,8 @@ export class Monster extends Circle {
                 return Constants.MONSTER_FAST_DASH_FORCE;
             case 'boss':
                 return Constants.MONSTER_BOSS_DASH_FORCE; // Very strong for boss
+            case 'vampire':
+                return Constants.MONSTER_VAMPIRE_DASH_FORCE; // Strong dash for vampire life drain
             default:
                 return Constants.MONSTER_FAST_DASH_FORCE; // Default fallback
         }

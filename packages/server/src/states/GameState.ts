@@ -424,22 +424,45 @@ export class GameState extends Schema {
                     monsterType = 'boss';
                     bossSpawned = true;
                 } else {
-                    // Regular monsters
+                    // Regular monsters (including vampire)
                     const regularTypes = Constants.MONSTER_TYPES.filter(type => type !== 'boss');
                     monsterType = regularTypes[Maths.getRandomInt(0, regularTypes.length - 1)];
                 }
             }
 
-            // Use boss size for boss monsters, regular size for others
-            const monsterRadius = monsterType === 'boss' ? Constants.MONSTER_BOSS_SIZE / 2 : Constants.MONSTER_SIZE / 2;
+            // Use appropriate size for different monster types
+            let monsterRadius: number;
+            switch (monsterType) {
+                case 'boss':
+                    monsterRadius = Constants.MONSTER_BOSS_SIZE / 2;
+                    break;
+                case 'vampire':
+                    monsterRadius = Constants.MONSTER_VAMPIRE_SIZE / 2;
+                    break;
+                default:
+                    monsterRadius = Constants.MONSTER_SIZE / 2;
+                    break;
+            }
+
             const body = this.getPositionRandomly(
                 new Geometry.CircleBody(0, 0, monsterRadius),
                 false,
                 false,
             );
 
-            // Use boss lives for boss monsters
-            const monsterLives = monsterType === 'boss' ? Constants.MONSTER_BOSS_LIVES : Constants.MONSTER_LIVES;
+            // Use appropriate lives for different monster types
+            let monsterLives: number;
+            switch (monsterType) {
+                case 'boss':
+                    monsterLives = Constants.MONSTER_BOSS_LIVES;
+                    break;
+                case 'vampire':
+                    monsterLives = Constants.MONSTER_VAMPIRE_LIVES;
+                    break;
+                default:
+                    monsterLives = Constants.MONSTER_LIVES;
+                    break;
+            }
 
             const monster = new Monster(
                 body.x,
@@ -479,6 +502,7 @@ export class GameState extends Schema {
 
             const monsterName = monster.type === 'bat' ? 'A bat' :
                                monster.type === 'aggressive' ? 'An aggressive monster' :
+                               monster.type === 'vampire' ? 'A vampire' :
                                'A fast monster';
 
             if (!player.isAlive) {

@@ -3,6 +3,7 @@ import { Effects } from '../sprites';
 import { Graphics } from 'pixi.js';
 import { Models, Constants } from '@tosios/common';
 import { MonstersTextures } from '../assets/images';
+import { Vampire } from '../assets/images/monsters';
 
 const HURT_COLOR = 0xff0000;
 const ZINDEXES = {
@@ -46,11 +47,14 @@ export class Monster extends BaseEntity {
 
     // Init
     constructor(monster: Models.MonsterJSON) {
+        // Choose appropriate texture based on monster type
+        const textures = monster.monsterType === 'vampire' ? Vampire : MonstersTextures.Monster;
+
         super({
             x: monster.x,
             y: monster.y,
             radius: monster.radius,
-            textures: MonstersTextures.Monster,
+            textures: textures,
             zIndex: ZINDEXES.MONSTER,
         });
 
@@ -156,6 +160,9 @@ export class Monster extends BaseEntity {
             case 'boss':
                 this.sprite.tint = 0x66ccff; // Bright blue for cold boss
                 break;
+            case 'vampire':
+                this.sprite.tint = 0x8B008B; // Dark magenta (vampire purple)
+                break;
             default:
                 this.sprite.tint = 0xcccccc; // Default light gray
                 break;
@@ -251,6 +258,10 @@ export class Monster extends BaseEntity {
             // Aggressive monsters squash during knockback
             const squashScale = 0.9 + Math.sin(time * 10) * 0.1;
             this.sprite.scale.set(1.1, squashScale);
+        } else if (this._monsterType === 'vampire') {
+            // Vampire has subtle ethereal pulsing
+            const etherealPulse = 1.0 + Math.sin(time * 1.5) * 0.05;
+            this.sprite.scale.set(etherealPulse, etherealPulse);
         } else {
             // Normal scale
             this.sprite.scale.set(1.0, 1.0);
@@ -410,6 +421,8 @@ export class Monster extends BaseEntity {
                 return 0x4444ff; // Blue
             case 'boss':
                 return 0xffaa00; // Golden
+            case 'vampire':
+                return 0x8B008B; // Dark magenta (vampire purple)
             default:
                 return 0xcccccc;
         }
