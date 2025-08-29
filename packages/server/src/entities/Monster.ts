@@ -30,6 +30,9 @@ export class Monster extends Circle {
     @type('number')
     private attackPositionY: number = 0;
 
+    @type('string')
+    private targetPlayerId: string | null = null;
+
     // Hidden properties
     private mapWidth: number;
 
@@ -467,16 +470,17 @@ export class Monster extends Circle {
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
             const aggressiveOffset = Math.sin(time * 1.5) * 0.2;
             this.move(moveSpeed * 1.5, angleToPlayer + aggressiveOffset);
-        } else if (distance < attackDistance - 10) {
-            // Too close - fast strategic retreat
-            const retreatAngle = Maths.calculateAngle(this.x, this.y, player.x, player.y);
-            this.move(moveSpeed * 2.0, retreatAngle);
+        } else if (distance < attackDistance - 5) {
+            // Too close - slow back away instead of fast retreat
+            const angleAway = Maths.calculateAngle(this.x, this.y, player.x, player.y);
+            this.move(moveSpeed * 0.7, angleAway); // Slow retreat instead of fast dash
         } else {
-            // At attack distance - perform DASH attack pattern
+            // At attack distance - perform controlled attack pattern
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
 
-            // Boss always dashes directly at the target with maximum speed
-            this.move(moveSpeed * 2.0, angleToPlayer); // Double speed dash attack
+            // Boss circles slowly while preparing to attack
+            const circleOffset = Math.sin(time * 2.0) * 0.1; // Much smaller circle
+            this.move(moveSpeed * 0.3, angleToPlayer + circleOffset); // Much slower movement
 
             // Use ability instead of regular attack sometimes
             if (Math.random() < 0.3 && this.canUseAbility()) {

@@ -36,6 +36,10 @@ export class Monster extends BaseEntity {
 
     private _attackPositionY: number = 0;
 
+    // Target tracking
+    private _targetPlayerId: string | null = null;
+    private _currentPlayerId: string | null = null;
+
     // Boss-specific properties
     private _isBoss: boolean = false;
     private _bossHP: number = 0;
@@ -44,6 +48,9 @@ export class Monster extends BaseEntity {
     // Boss visual effects
     private _bossGlow: Graphics;
     private _healthBar: Graphics;
+
+    // Target indicator
+    private _targetIndicator: Graphics;
 
     // Init
     constructor(monster: Models.MonsterJSON) {
@@ -91,6 +98,11 @@ export class Monster extends BaseEntity {
         this._shadow.endFill();
         this.container.addChild(this._shadow);
 
+        // Create target indicator
+        this._targetIndicator = new Graphics();
+        this._targetIndicator.zIndex = ZINDEXES.MONSTER + 1; // Above monster
+        this.container.addChild(this._targetIndicator);
+
         // Sort rendering order
         this.container.sortChildren();
     }
@@ -100,7 +112,7 @@ export class Monster extends BaseEntity {
         Effects.flash(this.sprite, HURT_COLOR, 0xffffff);
     }
 
-    updateFromServer(monster: Models.MonsterJSON) {
+    updateFromServer(monster: Models.MonsterJSON, currentPlayerId?: string) {
         // Update position and rotation
         this.x = monster.x;
         this.y = monster.y;
@@ -116,6 +128,8 @@ export class Monster extends BaseEntity {
         this._cooldownUntil = monster.cooldownUntil;
         this._attackPositionX = monster.attackPositionX;
         this._attackPositionY = monster.attackPositionY;
+        this._targetPlayerId = monster.targetPlayerId;
+        this._currentPlayerId = currentPlayerId || null;
 
         // Update boss-specific properties
         this._isBoss = monster.isBoss;
@@ -201,6 +215,9 @@ export class Monster extends BaseEntity {
 
         // Add scale effects for different behaviors
         this.updateScaleEffects();
+
+        // Update target indicator
+        this.updateTargetIndicator();
 
         // Update boss visual effects
         if (this._isBoss) {
@@ -442,6 +459,49 @@ export class Monster extends BaseEntity {
         const g = Math.max(0, ((baseTint >> 8) & 0xff) - 64);
         const b = Math.max(0, (baseTint & 0xff) - 64);
         return (r << 16) | (g << 8) | b;
+    }
+
+    private updateTargetIndicator() {
+        if (!this._targetIndicator) return;
+
+        // Clear previous indicator
+        this._targetIndicator.clear();
+
+        // Check if this monster is targeting the current player
+        const isTargetingMe = this._targetPlayerId === this._currentPlayerId;
+
+        if (isTargetingMe) {
+            const time = Date.now() * 0.001;
+            const radius = this.radius;
+
+            // Create pulsing red indicator above monster
+            const pulseIntensity = 0.7 + Math.sin(time * 3) * 0.3;
+            const indicatorRadius = radius * 0.8;
+
+            // Outer glow ring
+            this._targetIndicator.beginFill(0xff0000, pulseIntensity * 0.3);
+            this._targetIndicator.drawCircle(0, -radius - 10, indicatorRadius * 1.5);
+            this._targetIndicator.endFill();
+
+            // Inner warning circle
+            this._targetIndicator.beginFill(0xff0000, pulseIntensity * 0.7);
+            this._targetIndicator.drawCircle(0, -radius - 10, indicatorRadius);
+            this._targetIndicator.endFill();
+
+            // White center dot
+            this._targetIndicator.beginFill(0xffffff, pulseIntensity);
+            this._targetIndicator.drawCircle(0, -radius - 10, indicatorRadius * 0.3);
+            this._targetIndicator.endFill();
+
+            // Add exclamation mark for extra warning
+            this._targetIndicator.lineStyle(2, 0xffffff, pulseIntensity);
+            this._targetIndicator.moveTo(0, -radius - 10 - indicatorRadius * 0.5);
+            this._targetIndicator.lineTo(0, -radius - 10 + indicatorRadius * 0.5);
+            this._targetIndicator.moveTo(0, -radius - 10 + indicatorRadius * 0.2);
+            this._targetIndicator.lineTo(0, -radius - 10 + indicatorRadius * 0.5);
+
+            console.log(`🎯 TARGET INDICATOR: Monster is targeting YOU!`);
+        }
     }
 
     // Setters

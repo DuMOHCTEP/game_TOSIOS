@@ -638,6 +638,7 @@ export class Game {
     // COLYSEUS: Monster
     monsterAdd = (monsterId: string, attributes: Models.MonsterJSON) => {
         const monster = new Monster(attributes);
+        monster.updateFromServer(attributes, this.me?.playerId);
         this.monstersManager.add(monsterId, monster);
     };
 
@@ -647,7 +648,8 @@ export class Game {
             return;
         }
 
-        monster.rotation = attributes.rotation;
+        // Update monster data including target tracking
+        monster.updateFromServer(attributes, this.me?.playerId);
 
         // Set new interpolation values
         monster.x = monster.toX;
