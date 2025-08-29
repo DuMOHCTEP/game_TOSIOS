@@ -1,4 +1,4 @@
-import { Maths, Types, CharacterType } from '@tosios/common';
+import { Maths, Types, CharacterType, Constants } from '@tosios/common';
 import { Circle } from './Circle';
 import { type } from '@colyseus/schema';
 
@@ -54,7 +54,7 @@ export class Player extends Circle {
         this.maxLives = maxLives;
         this.name = validateName(name);
         this.team = team;
-        this.characterType = characterType || 'warrior';
+        this.characterType = characterType || Constants.CHARACTER_DEFAULT;
         this.color = team ? getTeamColor(team) : '#FFFFFF';
         this.kills = 0;
         this.rotation = 0;
