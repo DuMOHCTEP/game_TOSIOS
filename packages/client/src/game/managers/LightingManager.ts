@@ -1,15 +1,21 @@
-import { Container, Graphics } from 'pixi.js';
-import { Constants } from '@tosios/common';
+import { Container, Graphics, Point } from 'pixi.js';
+import { Constants, Maps, Tiled } from '@tosios/common';
 
 /**
- * Менеджер освещения для создания атмосферы подземелья
- * Управляет зоной видимости, эффектами света и темными областями
+ * Продвинутый менеджер освещения с учетом геометрии карты
+ * Создает реалистичные тени и направленное освещение
  */
 export class LightingManager {
     private container: Container;
     private darknessLayer: Graphics;
     private lightMask: Graphics;
+    private shadowMask: Graphics;
     private ambientLightLayer: Graphics;
+
+    // Данные карты для расчетов теней
+    private mapData: any = null;
+    private tileSize: number = 16;
+    private wallsLayer: any = null;
 
     // Настройки освещения
     private playerLightRadius: number;
@@ -51,13 +57,100 @@ export class LightingManager {
         this.lightMask.drawRect(-5000, -5000, 10000, 10000);
         this.lightMask.endFill();
 
+        // Создаем слой для теней от стен
+        this.shadowMask = new Graphics();
+
         // Добавляем слои в контейнер
+        this.container.addChild(this.shadowMask);
         this.container.addChild(this.darknessLayer);
 
         // Применяем маску к слою темноты
         this.darknessLayer.mask = this.lightMask;
 
         console.log('🏮 LightingManager: Инициализация завершена');
+    }
+
+    /**
+     * Загружает данные карты для расчетов теней
+     */
+    public loadMapData(mapData: any) {
+        this.mapData = mapData;
+        console.log('🏮 LightingManager: Данные карты загружены');
+
+        // Находим слой стен для расчетов теней
+        if (this.mapData?.layers) {
+            this.wallsLayer = this.mapData.layers.find((layer: any) =>
+                layer.name === 'walls' || layer.name === 'collisions'
+            );
+
+            if (this.wallsLayer) {
+                console.log('🏮 LightingManager: Слой стен найден, размер:', this.wallsLayer.width, 'x', this.wallsLayer.height);
+            } else {
+                console.warn('🏮 LightingManager: Слой стен не найден!');
+            }
+        }
+    }
+
+    /**
+     * Рассчитывает тени от стен
+     */
+    private calculateShadows(playerX: number, playerY: number) {
+        if (!Constants.SHADOWS_ENABLED || !this.wallsLayer || !this.wallsLayer.data) return;
+
+        this.shadowMask.clear();
+        this.shadowMask.beginFill(0x000000, Constants.SHADOW_OPACITY); // Настраиваемая непрозрачность теней
+
+        const mapWidth = this.wallsLayer.width;
+        const mapHeight = this.wallsLayer.height;
+
+        // Проходим по всем тайлам и создаем тени для стен
+        for (let y = 0; y < mapHeight; y++) {
+            for (let x = 0; x < mapWidth; x++) {
+                const tileIndex = y * mapWidth + x;
+                const tileId = this.wallsLayer.data[tileIndex];
+
+                // Если это стена (tileId > 0)
+                if (tileId > 0) {
+                    const worldX = x * this.tileSize;
+                    const worldY = y * this.tileSize;
+
+                    // Рассчитываем расстояние до игрока
+                    const distance = Math.sqrt(
+                        Math.pow(worldX - playerX, 2) + Math.pow(worldY - playerY, 2)
+                    );
+
+                    // Создаем тень только если стена достаточно близко к игроку
+                    if (distance <= this.playerLightRadius + Constants.SHADOW_FADE_DISTANCE) {
+                        this.createWallShadow(worldX, worldY, playerX, playerY);
+                    }
+                }
+            }
+        }
+
+        this.shadowMask.endFill();
+    }
+
+    /**
+     * Создает тень от конкретной стены
+     */
+    private createWallShadow(wallX: number, wallY: number, playerX: number, playerY: number) {
+        const shadowLength = Constants.SHADOW_LENGTH; // Настраиваемая длина тени
+        const wallSize = this.tileSize;
+
+        // Рассчитываем направление от игрока к стене
+        const angle = Math.atan2(wallY - playerY, wallX - playerX);
+
+        // Создаем тень как вытянутый прямоугольник
+        const shadowX = wallX + Math.cos(angle) * shadowLength / 2;
+        const shadowY = wallY + Math.sin(angle) * shadowLength / 2;
+
+        // Рисуем тень
+        this.shadowMask.drawRect(
+            shadowX - wallSize / 2,
+            shadowY - wallSize / 2,
+            wallSize,
+            shadowLength
+        );
     }
 
     /**
@@ -84,11 +177,16 @@ export class LightingManager {
         this.lightMask.drawCircle(playerX, playerY, this.playerLightRadius * 0.3);
         this.lightMask.endFill();
 
+        // Рассчитываем тени от стен
+        this.calculateShadows(playerX, playerY);
+
         // Позиционируем слой темноты так, чтобы он следовал за камерой
         this.darknessLayer.x = -playerX + screenWidth / 2;
         this.darknessLayer.y = -playerY + screenHeight / 2;
+        this.shadowMask.x = this.darknessLayer.x;
+        this.shadowMask.y = this.darknessLayer.y;
 
-        console.log(`🌑 Darkness layer position: [${this.darknessLayer.x.toFixed(0)}, ${this.darknessLayer.y.toFixed(0)}]`);
+        console.log(`🌑 Lighting updated: Player [${playerX.toFixed(0)}, ${playerY.toFixed(0)}], Shadows calculated`);
     }
 
     /**

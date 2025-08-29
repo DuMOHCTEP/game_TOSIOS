@@ -352,6 +352,11 @@ export class Game {
         const data = Maps.List[this.mapName];
         const tiledMap = new Tiled.Map(data, Constants.TILE_SIZE);
 
+        // Load map data for lighting system
+        if (this.lightingManager) {
+            this.lightingManager.loadMapData(data);
+        }
+
         // Set the map boundaries
         this.map.setDimensions(tiledMap.widthInPixels, tiledMap.heightInPixels);
 

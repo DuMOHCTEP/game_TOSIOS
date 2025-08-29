@@ -40,6 +40,12 @@ export const BULLET_FLASH_DURATION = 150; // ms - how long flash lasts
 export const MONSTER_GLOW_ENABLED = true; // Enable glow effects for monsters
 export const MONSTER_GLOW_COLOR = 0xffaa00; // Orange color for monster glow
 
+// Shadow Effects (Advanced Lighting)
+export const SHADOWS_ENABLED = true; // Enable shadow calculations from walls
+export const SHADOW_OPACITY = 0.8; // How dark the shadows are (0.0-1.0)
+export const SHADOW_LENGTH = 100; // How long shadows extend from walls
+export const SHADOW_FADE_DISTANCE = 50; // Distance at which shadows start to fade
+
 // Tile (rectangle)
 export const TILE_SIZE = 32;
 
