@@ -144,7 +144,7 @@ export class Monster extends BaseEntity {
                 this.sprite.tint = 0x4444ff; // Blue for fast monster
                 break;
             case 'boss':
-                this.sprite.tint = 0xffaa00; // Golden for boss monster
+                this.sprite.tint = 0x66ccff; // Bright blue for cold boss
                 break;
             default:
                 this.sprite.tint = 0xcccccc; // Default light gray
@@ -258,17 +258,36 @@ export class Monster extends BaseEntity {
         const time = Date.now() * 0.001;
         const radius = this.radius;
 
-        // Update glowing aura
+        // Update cold glowing aura
         this._bossGlow.clear();
-        const glowIntensity = 0.3 + Math.sin(time * 3) * 0.1; // Pulsing glow
-        this._bossGlow.beginFill(0xffaa00, glowIntensity);
-        this._bossGlow.drawCircle(0, 0, radius * 1.5);
+        const glowIntensity = 0.4 + Math.sin(time * 2) * 0.15; // Stronger pulsing cold glow
+
+        // Outer cold blue aura
+        this._bossGlow.beginFill(0x0088ff, glowIntensity * 0.6);
+        this._bossGlow.drawCircle(0, 0, radius * 2.0);
         this._bossGlow.endFill();
 
-        // Inner glow
-        this._bossGlow.beginFill(0xff6600, glowIntensity * 0.7);
-        this._bossGlow.drawCircle(0, 0, radius * 1.2);
+        // Middle icy blue aura
+        this._bossGlow.beginFill(0x44aaff, glowIntensity * 0.8);
+        this._bossGlow.drawCircle(0, 0, radius * 1.7);
         this._bossGlow.endFill();
+
+        // Inner bright blue core
+        this._bossGlow.beginFill(0x66ccff, glowIntensity);
+        this._bossGlow.drawCircle(0, 0, radius * 1.4);
+        this._bossGlow.endFill();
+
+        // Extra cold particles effect
+        for (let i = 0; i < 6; i++) {
+            const angle = (time * 0.5 + i * Math.PI / 3) % (Math.PI * 2);
+            const distance = radius * (1.8 + Math.sin(time * 3 + i) * 0.2);
+            const x = Math.cos(angle) * distance;
+            const y = Math.sin(angle) * distance;
+
+            this._bossGlow.beginFill(0xaaddff, glowIntensity * 0.3);
+            this._bossGlow.drawCircle(x, y, 3 + Math.sin(time * 4 + i) * 1);
+            this._bossGlow.endFill();
+        }
 
         // Update health bar
         this._healthBar.clear();

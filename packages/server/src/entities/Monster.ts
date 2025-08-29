@@ -81,6 +81,10 @@ export class Monster extends Circle {
     private currentAbilityPattern: number = 0; // For varied ability usage
     private lastPatternChange: number = 0;
 
+    // Circular attack system
+    private lastCircularAttack: number = 0;
+    private circularAttackCount: number = 0;
+
     // Init
     constructor(x: number, y: number, radius: number, mapWidth: number, mapHeight: number, lives: number, monsterType?: MonsterType) {
         // Initialize type first
@@ -89,7 +93,7 @@ export class Monster extends Circle {
 
         // Set boss-specific properties before super()
         if (isBossMonster) {
-            radius = Constants.MONSTER_BOSS_SIZE / 2;
+            radius = (Constants.MONSTER_BOSS_SIZE / 2) * 1.5; // 50% larger
             lives = Constants.MONSTER_BOSS_LIVES;
         }
 
@@ -361,6 +365,10 @@ export class Monster extends Circle {
 
     private executeBossChase(player: Player, distance: number, attackDistance: number, moveSpeed: number) {
         const time = Date.now() * 0.001;
+        const currentTime = Date.now();
+
+        // Handle circular attacks every 10 seconds
+        this.handleCircularAttacks(player, currentTime);
 
         // Boss has complex behavior patterns
         if (distance > attackDistance + 100) {
@@ -397,6 +405,51 @@ export class Monster extends Circle {
             if (Math.random() < 0.3 && this.canUseAbility()) {
                 this.useRandomAbility(player);
             }
+        }
+    }
+
+    private handleCircularAttacks(player: Player, currentTime: number) {
+        // Circular attack every 10 seconds - 3 shots in a circle
+        if (this.canUseCircularAttack() && this.circularAttackCount === 0) {
+            // Start circular attack sequence
+            this.lastCircularAttack = currentTime;
+            this.fireCircularShot(player, 0);
+            this.circularAttackCount = 1;
+        } else if (this.circularAttackCount > 0 && this.circularAttackCount < 3) {
+            // Continue firing shots every 0.5 seconds
+            const timeSinceStart = currentTime - (this.lastCircularAttack - 10000);
+            const shotIndex = Math.floor(timeSinceStart / 500);
+
+            if (shotIndex > this.circularAttackCount - 1 && shotIndex < 3) {
+                this.fireCircularShot(player, shotIndex);
+                this.circularAttackCount = shotIndex + 1;
+            } else if (shotIndex >= 3) {
+                // Sequence complete
+                this.circularAttackCount = 0;
+            }
+        }
+    }
+
+    private fireCircularShot(player: Player, shotIndex: number) {
+        // Calculate angle for this shot (120 degrees apart for 3 shots)
+        const baseAngle = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+        const shotAngle = baseAngle + (shotIndex * Math.PI * 2 / 3); // 120 degrees apart
+
+        // Create projectile in the direction of the shot
+        console.log(`Boss fires circular shot ${shotIndex + 1}/3 at angle ${shotAngle.toFixed(2)}`);
+
+        // In a real implementation, this would create actual projectiles
+        // For now, simulate area damage in the direction of the shot
+        const damageRadius = 60;
+        const damage = 3;
+
+        // Calculate damage area
+        const damageX = this.x + Math.cos(shotAngle) * damageRadius;
+        const damageY = this.y + Math.sin(shotAngle) * damageRadius;
+
+        const distanceToPlayer = Maths.getDistance(damageX, damageY, player.x, player.y);
+        if (distanceToPlayer <= damageRadius) {
+            console.log(`Circular shot ${shotIndex + 1} hits player for ${damage} damage!`);
         }
     }
 
@@ -529,6 +582,11 @@ export class Monster extends Circle {
     private canUseAbility(): boolean {
         if (!this.isBoss) return false;
         return Date.now() - this.lastAbilityUsed >= this.abilityCooldown;
+    }
+
+    private canUseCircularAttack(): boolean {
+        if (!this.isBoss) return false;
+        return Date.now() - this.lastCircularAttack >= 10000; // 10 seconds
     }
 
     private useRandomAbility(player: Player) {
