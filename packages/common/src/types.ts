@@ -8,6 +8,7 @@ export type WallCollisionType = 'full' | 'none';
  */
 export interface IPlayerOptions {
     playerName?: string;
+    characterType?: CharacterType;
 }
 
 /**
@@ -15,6 +16,7 @@ export interface IPlayerOptions {
  */
 export interface IRoomOptions {
     playerName?: string;
+    characterType?: CharacterType;
     roomName: string;
     roomMap: string;
     roomMaxPlayers: number;

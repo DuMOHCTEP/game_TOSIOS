@@ -2,9 +2,11 @@ import { Constants, Maths, Models, Types } from '@tosios/common';
 import { Container, Graphics, Sprite, Texture, utils } from 'pixi.js';
 import { Effects, PlayerLivesSprite, TextSprite } from '../sprites';
 import { PlayerTextures, WeaponTextures } from '../assets/images';
+import { archerIdleTexture, archerRunTexture, archerShootTexture } from '../assets/images/player';
 import { SmokeConfig, SmokeTexture } from '../assets/particles';
 import { BaseEntity } from '.';
 import { Emitter } from 'pixi-particles';
+import { CharacterType } from '@tosios/common';
 
 const NAME_OFFSET = 4;
 const LIVES_OFFSET = 10;
@@ -37,6 +39,8 @@ export class Player extends BaseEntity {
     private _color: string = '#FFFFFF';
 
     private _kills: number = 0;
+
+    private _characterType: CharacterType = 'warrior';
 
     private _rotation: number = 0;
 
@@ -71,12 +75,13 @@ export class Player extends BaseEntity {
             x: player.x,
             y: player.y,
             radius: player.radius,
-            textures: getTexture(player.lives),
+            textures: getTexture(player.lives, player.characterType || 'warrior'),
             zIndex: ZINDEXES.PLAYER,
         });
 
-        // Weapon
-        this._weaponSprite = new Sprite(WeaponTextures.staff);
+        // Weapon (depends on character type)
+        const weaponTexture = this._characterType === 'archer' ? WeaponTextures.arrow : WeaponTextures.staff;
+        this._weaponSprite = new Sprite(weaponTexture);
         this._weaponSprite.anchor.set(0, 0.5);
         this._weaponSprite.position.set(player.radius, player.radius);
         this._weaponSprite.zIndex = ZINDEXES.WEAPON_BACK;
@@ -124,6 +129,7 @@ export class Player extends BaseEntity {
         this.maxLives = player.maxLives;
         this.kills = player.kills;
         this.team = player.team;
+        this._characterType = player.characterType || 'warrior';
         this.isGhost = isGhost;
 
         // Ghost
@@ -408,8 +414,20 @@ export class Player extends BaseEntity {
 /**
  * Return a texture depending on the number of lives.
  */
-const getTexture = (lives: number): Texture[] => {
-    return lives > 0 ? PlayerTextures.playerIdleTextures : PlayerTextures.playerDeadTextures;
+const getTexture = (lives: number, characterType: CharacterType): Texture[] => {
+    if (lives <= 0) {
+        return PlayerTextures.playerDeadTextures;
+    }
+
+    // Return different textures based on character type
+    switch (characterType) {
+        case 'archer':
+            // For archer, we'll use idle texture for now (can be extended for animations)
+            return [archerIdleTexture];
+        case 'warrior':
+        default:
+            return PlayerTextures.playerIdleTextures;
+    }
 };
 
 /**

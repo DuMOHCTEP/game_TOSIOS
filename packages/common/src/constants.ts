@@ -152,6 +152,13 @@ export const VAMPIRE_BAT_SWARM_COUNT = 3; // How many bats to summon
 export const VAMPIRE_HYPNOSIS_DURATION = 3000; // 3 seconds stun
 export const VAMPIRE_HYPNOSIS_RANGE = 60; // Hypnosis range
 
+// Character Types
+export const CHARACTER_TYPES = ['warrior', 'archer'] as const;
+export type CharacterType = typeof CHARACTER_TYPES[number];
+
+// Character-specific constants
+export const CHARACTER_DEFAULT = 'warrior';
+
 // Props (rectangle)
 export const FLASKS_COUNT = 3;
 export const FLASK_SIZE = 24;

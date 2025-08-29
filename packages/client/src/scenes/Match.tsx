@@ -77,9 +77,10 @@ export default class Match extends Component<IProps, IState> {
                 roomMaxPlayers: Number(parsedSearch.roomMaxPlayers),
             };
         } else {
-            // The only thing to pass when joining an existing room is a player's name
+            // When joining an existing room, pass player's name and character type
             options = {
                 playerName: localStorage.getItem('playerName'),
+                characterType: localStorage.getItem('characterType') || Constants.CHARACTER_DEFAULT,
             };
         }
 

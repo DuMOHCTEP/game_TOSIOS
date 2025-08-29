@@ -8,10 +8,24 @@ import playerIdle2 from './player-idle-2.png';
 import playerIdle3 from './player-idle-3.png';
 import playerIdle4 from './player-idle-4.png';
 
-// Dead
-const playerDeadTextures = createTexturesArray([playerDead1, playerDead2, playerDead3, playerDead4]);
+// Archer textures
+import archerIdle from './archer/Archer_Idle.png';
+import archerRun from './archer/Archer_Run.png';
+import archerShoot from './archer/Archer_Shoot.png';
 
-// Idle
+// Warrior (default character)
+const playerDeadTextures = createTexturesArray([playerDead1, playerDead2, playerDead3, playerDead4]);
 const playerIdleTextures = createTexturesArray([playerIdle1, playerIdle2, playerIdle3, playerIdle4]);
 
-export { playerDeadTextures, playerIdleTextures };
+// Archer textures (single sprites, not animated)
+const archerIdleTexture = archerIdle;
+const archerRunTexture = archerRun;
+const archerShootTexture = archerShoot;
+
+export {
+    playerDeadTextures,
+    playerIdleTextures,
+    archerIdleTexture,
+    archerRunTexture,
+    archerShootTexture
+};
