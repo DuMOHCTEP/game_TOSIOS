@@ -82,14 +82,18 @@ export const MONSTER_FAST_DASH_FORCE = 8.0;
 export const MONSTER_FAST_DASH_COOLDOWN = 1500; // ms
 
 // Boss Monster (legendary type)
-export const MONSTER_BOSS_SIZE = 62; // Larger than regular monsters (30% wider)
+export const MONSTER_BOSS_SIZE = 93; // Much larger than regular monsters (80% wider total)
 export const MONSTER_BOSS_LIVES = 20; // Much more HP than regular monsters
-export const MONSTER_BOSS_SPEED_PATROL = 2.5; // Much faster patrol
-export const MONSTER_BOSS_SPEED_CHASE = 4.0; // Very fast chase speed
+export const MONSTER_BOSS_SPEED_PATROL = 1.5; // Moderate patrol speed
+export const MONSTER_BOSS_SPEED_CHASE = 2.0; // Moderate chase speed
 export const MONSTER_BOSS_ATTACK_BACKOFF = 1000; // 1 second cooldown
 export const MONSTER_BOSS_DASH_COOLDOWN = 2000; // 2 seconds - dash cooldown for boss
-export const MONSTER_BOSS_DASH_FORCE = 15.0; // Very strong dash for boss
+export const MONSTER_BOSS_DASH_FORCE = 12.0; // Strong dash for boss
 export const MONSTER_BOSS_ABILITY_COOLDOWN = 5000; // Special ability cooldown
+
+// Boss Visual Scale (for stretching the sprite)
+export const MONSTER_BOSS_SCALE_WIDTH = 2.5; // How much wider the boss sprite appears (2.5x)
+export const MONSTER_BOSS_SCALE_HEIGHT = 1.8; // How much taller the boss sprite appears (1.8x)
 
 // Boss Abilities
 export const BOSS_ABILITY_TYPES = ['fireball', 'lightning', 'heal', 'summon', 'teleport'] as const;

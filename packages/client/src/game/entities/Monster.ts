@@ -1,7 +1,7 @@
 import { BaseEntity } from './';
 import { Effects } from '../sprites';
 import { Graphics } from 'pixi.js';
-import { Models } from '@tosios/common';
+import { Models, Constants } from '@tosios/common';
 import { MonstersTextures } from '../assets/images';
 
 const HURT_COLOR = 0xff0000;
@@ -238,10 +238,11 @@ export class Monster extends BaseEntity {
         const time = Date.now() * 0.001;
 
         if (this._isBoss) {
-            // Boss has majestic pulsing with wider scale
+            // Boss has majestic pulsing with configurable scale
             const bossPulse = 1.0 + Math.sin(time * 2) * 0.1;
-            const bossWidth = 1.3; // 30% wider
-            this.sprite.scale.set(bossPulse * bossWidth, bossPulse);
+            const bossWidth = Constants.MONSTER_BOSS_SCALE_WIDTH; // Configurable width scale
+            const bossHeight = Constants.MONSTER_BOSS_SCALE_HEIGHT; // Configurable height scale
+            this.sprite.scale.set(bossPulse * bossWidth, bossPulse * bossHeight);
         } else if (this._monsterType === 'fast' && Date.now() < this._cooldownUntil) {
             // Fast monsters have subtle scale pulsing during cooldown
             const scalePulse = 1.0 + Math.sin(time * 8) * 0.05;
