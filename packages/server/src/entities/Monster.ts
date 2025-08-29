@@ -83,20 +83,27 @@ export class Monster extends Circle {
 
     // Init
     constructor(x: number, y: number, radius: number, mapWidth: number, mapHeight: number, lives: number, monsterType?: MonsterType) {
-        // Initialize boss properties first
-        this.monsterType = monsterType || 'bat';
-        this.isBoss = this.monsterType === 'boss';
+        // Initialize type first
+        const actualType = monsterType || 'bat';
+        const isBossMonster = actualType === 'boss';
 
-        // Set boss-specific properties
-        if (this.isBoss) {
+        // Set boss-specific properties before super()
+        if (isBossMonster) {
             radius = Constants.MONSTER_BOSS_SIZE / 2;
             lives = Constants.MONSTER_BOSS_LIVES;
+        }
+
+        super(x, y, radius);
+
+        // Now we can use 'this'
+        this.monsterType = actualType;
+        this.isBoss = isBossMonster;
+
+        if (this.isBoss) {
             this.bossHP = Constants.MONSTER_BOSS_LIVES;
             this.bossMaxHP = Constants.MONSTER_BOSS_LIVES;
             this.abilityCooldown = Constants.MONSTER_BOSS_ABILITY_COOLDOWN;
         }
-
-        super(x, y, radius);
 
         this.mapWidth = mapWidth;
         this.mapHeight = mapHeight;
