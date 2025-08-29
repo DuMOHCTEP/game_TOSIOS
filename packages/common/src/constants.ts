@@ -22,6 +22,15 @@ export const GAME_MODES = ['deathmatch', 'team deathmatch'];
 // Background
 export const BACKGROUND_COLOR = '#25131A';
 
+// Lighting System (Dungeon Atmosphere) - Set to false to disable dungeon lighting
+export const LIGHTING_ENABLED = true;
+export const PLAYER_LIGHT_RADIUS = 150; // pixels - how far player can see
+export const MONSTER_LIGHT_RADIUS = 120; // pixels - monster visibility radius
+export const LIGHT_FADE_DISTANCE = 50; // pixels - fade transition zone
+export const DARKNESS_ALPHA = 0.85; // 0.0 = no darkness, 1.0 = pitch black
+export const LIGHT_INTENSITY = 0.9; // 0.0 = dim, 1.0 = bright
+export const AMBIENT_LIGHT_LEVEL = 0.15; // minimum light level everywhere
+
 // Tile (rectangle)
 export const TILE_SIZE = 32;
 
@@ -93,7 +102,7 @@ export const MONSTER_BOSS_ABILITY_COOLDOWN = 5000; // Special ability cooldown
 
 // Boss Visual Scale (for stretching the sprite)
 export const MONSTER_BOSS_SCALE_WIDTH = 2.5; // How much wider the boss sprite appears (2.5x)
-export const MONSTER_BOSS_SCALE_HEIGHT = 1.8; // How much taller the boss sprite appears (1.8x)
+export const MONSTER_BOSS_SCALE_HEIGHT = 3.8; // How much taller the boss sprite appears (1.8x)
 
 // Boss Abilities
 export const BOSS_ABILITY_TYPES = ['fireball', 'lightning', 'heal', 'summon', 'teleport'] as const;
