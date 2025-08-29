@@ -2,7 +2,8 @@ import { Constants, Maths, Models, Types } from '@tosios/common';
 import { Container, Graphics, Sprite, Texture, utils } from 'pixi.js';
 import { Effects, PlayerLivesSprite, TextSprite } from '../sprites';
 import { PlayerTextures, WeaponTextures } from '../assets/images';
-import { archerIdleTexture, archerRunTexture, archerShootTexture } from '../assets/images/player';
+// Temporarily disabled archer textures
+// import { archerIdleTexture, archerRunTexture, archerShootTexture } from '../assets/images/player';
 import { SmokeConfig, SmokeTexture } from '../assets/particles';
 import { BaseEntity } from '.';
 import { Emitter } from 'pixi-particles';
@@ -71,16 +72,16 @@ export class Player extends BaseEntity {
 
     // Init
     constructor(player: Models.PlayerJSON, isGhost: boolean, particlesContainer?: Container) {
-        // Initialize character type first
-        this._characterType = player.characterType || Constants.CHARACTER_DEFAULT;
-
         super({
             x: player.x,
             y: player.y,
             radius: player.radius,
-            textures: getTexture(player.lives, this._characterType),
+            textures: getTexture(player.lives, player.characterType || 'warrior'),
             zIndex: ZINDEXES.PLAYER,
         });
+
+        // Initialize character type
+        this._characterType = player.characterType || 'warrior';
 
         // Weapon (depends on character type)
         const weaponTexture = this._characterType === 'archer' ? WeaponTextures.arrow : WeaponTextures.staff;
@@ -420,9 +421,22 @@ export class Player extends BaseEntity {
     updateTexturesForCharacter(characterType: CharacterType) {
         const newTextures = getTexture(this._lives, characterType);
         this.textures = newTextures;
+
         if (this.sprite && newTextures.length > 0) {
-            this.sprite.texture = newTextures[0]; // Update current texture
+            // Update the sprite textures
+            this.sprite.textures = newTextures;
+            this.sprite.gotoAndStop(0); // Reset to first frame
+
+            // Play animation only if multiple frames
+            if (newTextures.length > 1) {
+                this.sprite.play();
+            } else {
+                this.sprite.stop();
+            }
         }
+
+        // Update weapon
+        this.updateWeaponForCharacter(characterType);
     }
 
     // Update weapon when character type changes
@@ -447,8 +461,8 @@ const getTexture = (lives: number, characterType: CharacterType): Texture[] => {
     // Return different textures based on character type
     switch (characterType) {
         case 'archer':
-            // For archer, we'll use idle texture for now (can be extended for animations)
-            return [archerIdleTexture];
+            // Temporarily use warrior textures for archer to test
+            return PlayerTextures.playerIdleTextures;
         case 'warrior':
         default:
             return PlayerTextures.playerIdleTextures;

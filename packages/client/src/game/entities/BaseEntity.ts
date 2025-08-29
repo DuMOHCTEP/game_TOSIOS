@@ -5,7 +5,7 @@ export interface BaseProps {
     x: number;
     y: number;
     radius: number;
-    textures: Texture[];
+    textures: Texture[] | Texture;
     zIndex?: number;
 }
 
@@ -16,20 +16,29 @@ export class BaseEntity {
 
     body: Geometry.CircleBody;
 
+    textures: Texture[];
+
     debug?: Graphics;
 
     constructor(props: BaseProps) {
         this.container = new Container();
 
         // Sprite
-        this.sprite = new AnimatedSprite(props.textures);
+        const textureArray = Array.isArray(props.textures) ? props.textures : [props.textures];
+        this.sprite = new AnimatedSprite(textureArray);
+        this.textures = textureArray;
         this.sprite.anchor.set(0.5);
         this.sprite.position.set(props.radius, props.radius);
         this.sprite.width = props.radius * 2;
         this.sprite.height = props.radius * 2;
         this.sprite.animationSpeed = 0.1;
         this.sprite.zIndex = props.zIndex || 0;
-        this.sprite.play();
+
+        // Only play animation if there are multiple frames
+        if (textureArray.length > 1) {
+            this.sprite.play();
+        }
+
         this.container.addChild(this.sprite);
 
         // Debug
