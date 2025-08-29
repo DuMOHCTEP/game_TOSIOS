@@ -6,7 +6,7 @@ import { GUITextures } from './assets/images';
 import { SpriteSheets } from './assets/images/maps';
 import { ImpactConfig, ImpactTexture } from './assets/particles';
 import { Monster, Player, Prop } from './entities';
-import { BulletsManager, LightingManager, MonstersManager, PlayersManager, PropsManager } from './managers';
+import { BulletsManager, MonstersManager, PlayersManager, PropsManager } from './managers';
 import { distanceBetween } from './utils/distance';
 import { Inputs } from './utils/inputs';
 import { getSpritesLayer, getTexturesSet } from './utils/tiled';
@@ -68,9 +68,6 @@ export class Game {
     private propsManager: PropsManager;
 
     private bulletsManager: BulletsManager;
-
-    // Lighting System
-    private lightingManager: LightingManager;
 
     // Collisions
     private walls: Collisions.TreeCollider;
@@ -151,11 +148,7 @@ export class Game {
         this.bulletsManager.zIndex = ZINDEXES.BULLETS;
         this.viewport.addChild(this.bulletsManager);
 
-        // Lighting System (Dungeon Atmosphere)
-        this.lightingManager = new LightingManager();
-        this.lightingManager.setEnabled(Constants.LIGHTING_ENABLED);
-        this.lightingManager.getContainer().zIndex = ZINDEXES.LIGHTING;
-        this.viewport.addChild(this.lightingManager.getContainer());
+
 
         // Viewport
         this.viewport.zoomPercent(utils.isMobile.any ? 0.25 : 1.0);
@@ -165,31 +158,7 @@ export class Game {
         this.onActionSend = onActionSend;
     }
 
-    // LIGHTING SYSTEM
-    private updateLightingSystem = () => {
-        if (!Constants.LIGHTING_ENABLED || !this.me || !this.lightingManager) return;
 
-        const playerX = this.me.x;
-        const playerY = this.me.y;
-
-        // Update player light position
-        this.lightingManager.updatePlayerLight(playerX, playerY, this.app.screen.width, this.app.screen.height);
-
-        // Add monster lights
-        const monsters = this.monstersManager.children as any[];
-        monsters.forEach((monster: any) => {
-            if (monster && monster.x !== undefined && monster.y !== undefined) {
-                const distanceToPlayer = Math.sqrt(
-                    Math.pow(monster.x - playerX, 2) + Math.pow(monster.y - playerY, 2)
-                );
-
-                // Only add monster light if it's close enough to be visible
-                if (distanceToPlayer <= Constants.PLAYER_LIGHT_RADIUS + Constants.MONSTER_LIGHT_RADIUS) {
-                    this.lightingManager.addMonsterLight(monster.x, monster.y, distanceToPlayer);
-                }
-            }
-        });
-    };
 
     start = (renderView: any) => {
         renderView.appendChild(this.app.view);
@@ -203,7 +172,6 @@ export class Game {
         this.updatePlayers();
         this.updateMonsters();
         this.updateBullets();
-        this.updateLightingSystem();
 
         this.playersManager.sortChildren();
     };
@@ -719,10 +687,7 @@ export class Game {
             return;
         }
 
-        // Add flash light effect for new bullets (dungeon atmosphere)
-        if (Constants.LIGHTING_ENABLED && this.lightingManager) {
-            this.lightingManager.addFlashLight(attributes.x, attributes.y);
-        }
+
 
         this.bulletsManager.addOrCreate(attributes, this.particlesContainer);
     };
