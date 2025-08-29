@@ -12,10 +12,6 @@ export interface MonsterJSON {
     cooldownUntil: number;
     attackPositionX: number;
     attackPositionY: number;
-    // Target tracking for indicators
-    targetPlayerId: string | null;
-    // Animation flags
-    cantAttack: boolean;
     // Boss-specific fields
     isBoss: boolean;
     bossHP: number;

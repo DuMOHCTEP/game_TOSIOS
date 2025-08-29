@@ -30,12 +30,6 @@ export class Monster extends Circle {
     @type('number')
     private attackPositionY: number = 0;
 
-    @type('string')
-    private targetPlayerId: string | null = null;
-
-    @type('boolean')
-    private cantAttack: boolean = false;
-
     // Hidden properties
     private mapWidth: number;
 
@@ -134,9 +128,6 @@ export class Monster extends Circle {
         // Handle dash for fast monsters
         this.updateDash();
 
-        // Update cantAttack flag based on current state and cooldowns
-        this.updateCantAttackFlag();
-
         switch (this.state) {
             case 'idle':
                 this.updateIdle(players);
@@ -186,20 +177,16 @@ export class Monster extends Circle {
         const jerkyMultiplier = this.getJerkyMovementMultiplier();
         this.move(speed * jerkyMultiplier, this.rotation);
 
-        // Is the monster out of bounds? (More strict boundary checking)
-        const monsterPadding = this.radius + Constants.TILE_SIZE; // Full tile + monster radius padding
+        // Is the monster out of bounds?
         if (
-            this.x < monsterPadding ||
-            this.x > this.mapWidth - monsterPadding ||
-            this.y < monsterPadding ||
-            this.y > this.mapHeight - monsterPadding
+            this.x < Constants.TILE_SIZE ||
+            this.x > this.mapWidth - Constants.TILE_SIZE ||
+            this.y < Constants.TILE_SIZE ||
+            this.y > this.mapHeight - Constants.TILE_SIZE
         ) {
-            // Force monster back into playable area
-            this.x = Maths.clamp(this.x, monsterPadding, this.mapWidth - monsterPadding);
-            this.y = Maths.clamp(this.y, monsterPadding, this.mapHeight - monsterPadding);
+            this.x = Maths.clamp(this.x, 0, this.mapWidth);
+            this.y = Maths.clamp(this.y, 0, this.mapHeight);
             this.rotation = Maths.getRandomInt(-3, 3);
-
-            console.log(`${this.type.toUpperCase()} forced back into bounds: (${this.x.toFixed(1)}, ${this.y.toFixed(1)})`);
         }
     }
 
@@ -253,11 +240,6 @@ export class Monster extends Circle {
             case 'boss':
                 // Boss: complex AI with abilities and target switching
                 this.executeBossChaseWithTargetSwitching(player, distance, attackDistance, speed * jerkyMultiplier);
-                break;
-
-            case 'vampire':
-                // Vampire: fast, elusive with life drain abilities
-                this.executeVampireChase(player, distance, attackDistance, speed * jerkyMultiplier);
                 break;
 
             default:
@@ -396,50 +378,6 @@ export class Monster extends Circle {
         this.executeBossChase(player, distance, attackDistance, moveSpeed);
     }
 
-    private executeVampireChase(player: Player, distance: number, attackDistance: number, moveSpeed: number) {
-        const time = Date.now() * 0.001;
-        const currentTime = Date.now();
-
-        // Vampire has unique elusive behavior - fast, unpredictable, and deadly
-        if (distance > attackDistance + 80) {
-            // Long range - very fast approach with erratic movement
-            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const erraticOffset = Math.sin(time * 3.0) * 0.6; // Very erratic
-            this.move(moveSpeed * 1.4, angleToPlayer + erraticOffset);
-        } else if (distance > attackDistance + 30) {
-            // Medium range - circling and ability usage
-            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const circleOffset = Math.sin(time * 2.5) * 0.8; // Fast circling
-            this.move(moveSpeed * 1.2, angleToPlayer + circleOffset);
-
-            // Try to use vampire abilities
-            if (this.canUseVampireAbility()) {
-                this.useRandomVampireAbility(player);
-            }
-        } else if (distance > attackDistance) {
-            // Close range - very aggressive fast approach
-            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const aggressiveOffset = Math.sin(time * 2.0) * 0.4;
-            this.move(moveSpeed * 1.8, angleToPlayer + aggressiveOffset);
-        } else if (distance < attackDistance - 10) {
-            // Too close - quick strategic retreat (vampires are smart)
-            const retreatAngle = Maths.calculateAngle(this.x, this.y, player.x, player.y);
-            this.move(moveSpeed * 2.2, retreatAngle);
-        } else {
-            // At attack distance - use life drain attack
-            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-
-            // Vampire moves erratically while attacking
-            const attackOffset = Math.sin(time * 4.0) * 0.3;
-            this.move(moveSpeed * 0.5, angleToPlayer + attackOffset);
-
-            // Use life drain instead of regular attack
-            if (this.canUseVampireAbility()) {
-                this.useVampireLifeDrain(player);
-            }
-        }
-    }
-
     private attemptTargetSwitch(currentPlayer: Player) {
         // Find the closest player within switch distance
         let closestPlayer: Player | null = null;
@@ -480,17 +418,16 @@ export class Monster extends Circle {
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
             const aggressiveOffset = Math.sin(time * 1.5) * 0.2;
             this.move(moveSpeed * 1.5, angleToPlayer + aggressiveOffset);
-        } else if (distance < attackDistance - 5) {
-            // Too close - slow back away instead of fast retreat
-            const angleAway = Maths.calculateAngle(this.x, this.y, player.x, player.y);
-            this.move(moveSpeed * 0.7, angleAway); // Slow retreat instead of fast dash
+        } else if (distance < attackDistance - 10) {
+            // Too close - fast strategic retreat
+            const retreatAngle = Maths.calculateAngle(this.x, this.y, player.x, player.y);
+            this.move(moveSpeed * 2.0, retreatAngle);
         } else {
-            // At attack distance - perform controlled attack pattern
+            // At attack distance - perform DASH attack pattern
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
 
-            // Boss circles slowly while preparing to attack
-            const circleOffset = Math.sin(time * 2.0) * 0.1; // Much smaller circle
-            this.move(moveSpeed * 0.3, angleToPlayer + circleOffset); // Much slower movement
+            // Boss always dashes directly at the target with maximum speed
+            this.move(moveSpeed * 2.0, angleToPlayer); // Double speed dash attack
 
             // Use ability instead of regular attack sometimes
             if (Math.random() < 0.3 && this.canUseAbility()) {
@@ -608,9 +545,6 @@ export class Monster extends Circle {
             case 'fast':
                 this.executeDynamicFastFlight(player, distanceToPlayer, safeDistance, time);
                 break;
-            case 'vampire':
-                this.executeDynamicVampireFlight(player, distanceToPlayer, safeDistance, time);
-                break;
             default:
                 this.executeDynamicBasicFlight(player, distanceToPlayer, safeDistance, time);
                 break;
@@ -677,41 +611,6 @@ export class Monster extends Circle {
 
         const totalOffset = dartMotion + zigzagMotion + burstMotion + unpredictableMotion;
         this.move(1.6, angleToPlayer + totalOffset);
-    }
-
-    private executeDynamicVampireFlight(player: Player, distanceToPlayer: number, safeDistance: number, time: number) {
-        // Vampires have supernatural, fluid flight patterns
-        const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-
-        // Supernatural fluid motions - very smooth but unpredictable
-        const fluidMotion = Math.sin(time * 1.5) * 0.5;
-        const etherealMotion = Math.cos(time * 2.2) * 0.4;
-        const shadowMotion = Math.sin(time * 3.1) * 0.3;
-        const mistMotion = Math.sin(time * 0.8 + Math.sin(time * 1.7)) * 0.2;
-
-        const totalOffset = fluidMotion + etherealMotion + shadowMotion + mistMotion;
-        this.move(2.0, angleToPlayer + totalOffset); // Vampires are faster in cooldown
-    }
-
-    private updateCantAttackFlag() {
-        // Determine if monster can't attack based on various conditions
-        const wasCantAttack = this.cantAttack;
-
-        // Monster can't attack if:
-        // 1. Not in chase state
-        // 2. In cooldown from previous attack
-        // 3. Currently dashing (can't attack while dashing)
-        // 4. Target is out of range or doesn't exist
-        const canActuallyAttack = this.canAttack;
-
-        this.cantAttack = !canActuallyAttack && this.state === 'chase' && this.targetPlayerId !== null;
-
-        // Log state changes for debugging
-        if (wasCantAttack !== this.cantAttack) {
-            if (this.cantAttack) {
-                console.log(`${this.type.toUpperCase()} can't attack - will perform knockback`);
-            }
-        }
     }
 
 
@@ -826,10 +725,9 @@ export class Monster extends Circle {
         const newX = player.x + Math.cos(angle) * distance;
         const newY = player.y + Math.sin(angle) * distance;
 
-        // Keep within map bounds with monster radius padding
-        const padding = this.radius + Constants.TILE_SIZE;
-        this.x = Maths.clamp(newX, padding, this.mapWidth - padding);
-        this.y = Maths.clamp(newY, padding, this.mapHeight - padding);
+        // Keep within map bounds
+        this.x = Maths.clamp(newX, 0, this.mapWidth);
+        this.y = Maths.clamp(newY, 0, this.mapHeight);
 
         console.log(`Boss teleports to new position!`);
     }
@@ -838,93 +736,6 @@ export class Monster extends Circle {
         // Summon ability - would create additional monsters
         console.log(`Boss summons minions!`);
         // In a real implementation, this would spawn additional monsters
-    }
-
-    // Vampire ability methods
-    private canUseVampireAbility(): boolean {
-        if (this.monsterType !== 'vampire') return false;
-        return Date.now() - this.lastAbilityUsed >= Constants.MONSTER_VAMPIRE_ABILITY_COOLDOWN;
-    }
-
-    private useRandomVampireAbility(player: Player) {
-        if (this.monsterType !== 'vampire') return;
-
-        const abilities = Constants.VAMPIRE_ABILITY_TYPES;
-        const randomAbility = abilities[Math.floor(Math.random() * abilities.length)];
-
-        this.castVampireAbility(randomAbility, player);
-        this.lastAbilityUsed = Date.now();
-    }
-
-    private castVampireAbility(abilityType: Constants.VampireAbilityType, player: Player) {
-        switch (abilityType) {
-            case 'life_drain':
-                this.useVampireLifeDrain(player);
-                break;
-            case 'mist_form':
-                this.useVampireMistForm();
-                break;
-            case 'bat_swarm':
-                this.useVampireBatSwarm(player);
-                break;
-            case 'hypnosis':
-                this.useVampireHypnosis(player);
-                break;
-        }
-    }
-
-    private useVampireLifeDrain(player: Player) {
-        const distance = Maths.getDistance(this.x, this.y, player.x, player.y);
-        if (distance <= Constants.MONSTER_VAMPIRE_LIFE_DRAIN_RANGE) {
-            // Life drain successful
-            const damage = Constants.VAMPIRE_LIFE_DRAIN_DAMAGE;
-            const heal = Constants.VAMPIRE_LIFE_DRAIN_HEAL;
-
-            console.log(`🧛 Vampire drains ${damage} life from player and gains ${heal} HP!`);
-
-            // In a real implementation, this would:
-            // 1. Deal damage to player
-            // 2. Heal vampire
-            // 3. Create visual effect
-
-            this.bossHP = Math.min(this.bossMaxHP, this.bossHP + heal);
-        }
-    }
-
-    private useVampireMistForm() {
-        console.log(`🧛 Vampire transforms into mist for ${Constants.VAMPIRE_MIST_DURATION}ms!`);
-
-        // In a real implementation, this would:
-        // 1. Make vampire temporarily intangible
-        // 2. Increase movement speed
-        // 3. Create mist visual effect
-        // 4. Make vampire immune to damage
-
-        // For now, just log the ability usage
-        this.lastAbilityUsed = Date.now();
-    }
-
-    private useVampireBatSwarm(player: Player) {
-        console.log(`🧛 Vampire summons ${Constants.VAMPIRE_BAT_SWARM_COUNT} bats to attack!`);
-
-        // In a real implementation, this would:
-        // 1. Spawn temporary bat monsters
-        // 2. Make them attack the player
-        // 3. Bats disappear after short time
-
-        this.lastAbilityUsed = Date.now();
-    }
-
-    private useVampireHypnosis(player: Player) {
-        const distance = Maths.getDistance(this.x, this.y, player.x, player.y);
-        if (distance <= Constants.VAMPIRE_HYPNOSIS_RANGE) {
-            console.log(`🧛 Vampire hypnotizes player for ${Constants.VAMPIRE_HYPNOSIS_DURATION}ms!`);
-
-            // In a real implementation, this would:
-            // 1. Stun the player temporarily
-            // 2. Create hypnosis visual effect
-            // 3. Prevent player from moving/shooting
-        }
     }
 
     // New monster mechanics
@@ -968,8 +779,6 @@ export class Monster extends Circle {
                 return Constants.MONSTER_FAST_SPEED_CHASE;
             case 'boss':
                 return Constants.MONSTER_BOSS_SPEED_CHASE; // Boss is very fast
-            case 'vampire':
-                return Constants.MONSTER_VAMPIRE_SPEED_CHASE; // Vampire is extremely fast
             default:
                 return Constants.MONSTER_SPEED_CHASE;
         }
@@ -985,8 +794,6 @@ export class Monster extends Circle {
                 return Constants.MONSTER_FAST_SPEED_PATROL;
             case 'boss':
                 return Constants.MONSTER_BOSS_SPEED_PATROL; // Boss patrols fast
-            case 'vampire':
-                return Constants.MONSTER_VAMPIRE_SPEED_PATROL; // Vampire patrols very fast
             default:
                 return Constants.MONSTER_SPEED_PATROL;
         }
@@ -1002,8 +809,6 @@ export class Monster extends Circle {
                 return Constants.MONSTER_FAST_ATTACK_BACKOFF;
             case 'boss':
                 return Constants.MONSTER_BOSS_ATTACK_BACKOFF; // 1 second for boss
-            case 'vampire':
-                return Constants.MONSTER_VAMPIRE_ATTACK_BACKOFF; // 1.5 seconds for vampire
             default:
                 return Constants.MONSTER_ATTACK_BACKOFF;
         }
@@ -1017,8 +822,6 @@ export class Monster extends Circle {
                 return Constants.MONSTER_FAST_DASH_COOLDOWN;
             case 'boss':
                 return Constants.MONSTER_BOSS_DASH_COOLDOWN; // 2 seconds for boss
-            case 'vampire':
-                return Constants.MONSTER_VAMPIRE_DASH_COOLDOWN; // 1 second for vampire (very fast)
             default:
                 return Constants.MONSTER_FAST_DASH_COOLDOWN; // Default fallback
         }
@@ -1032,8 +835,6 @@ export class Monster extends Circle {
                 return Constants.MONSTER_FAST_DASH_FORCE;
             case 'boss':
                 return Constants.MONSTER_BOSS_DASH_FORCE; // Very strong for boss
-            case 'vampire':
-                return Constants.MONSTER_VAMPIRE_DASH_FORCE; // Strong dash for vampire life drain
             default:
                 return Constants.MONSTER_FAST_DASH_FORCE; // Default fallback
         }
@@ -1160,23 +961,8 @@ export class Monster extends Circle {
     }
 
     move(speed: number, rotation: number) {
-        // Store old position for potential rollback
-        const oldX = this.x;
-        const oldY = this.y;
-
-        // Calculate new position
-        const newX = this.x + Math.cos(rotation) * speed;
-        const newY = this.y + Math.sin(rotation) * speed;
-
-        // Apply map boundaries to prevent monsters from flying out of arena
-        // Add padding for monster radius to ensure they don't clip through walls
-        const padding = this.radius + Constants.TILE_SIZE * 0.5; // Half tile padding
-        const clampedX = Maths.clamp(newX, padding, this.mapWidth - padding);
-        const clampedY = Maths.clamp(newY, padding, this.mapHeight - padding);
-
-        // Update position with boundary checks
-        this.x = clampedX;
-        this.y = clampedY;
+        this.x += Math.cos(rotation) * speed;
+        this.y += Math.sin(rotation) * speed;
     }
 
     attack(playerX: number, playerY: number) {

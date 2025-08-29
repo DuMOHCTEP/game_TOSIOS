@@ -51,7 +51,7 @@ export const PLAYER_WEAPON_SIZE = 12; // The bigger, the further away a bullet w
 export const PLAYER_HEARING_DISTANCE = 256;
 
 // Monster Types
-export const MONSTER_TYPES = ['bat', 'aggressive', 'fast', 'boss', 'vampire'] as const;
+export const MONSTER_TYPES = ['bat', 'aggressive', 'fast', 'boss'] as const;
 export type MonsterType = typeof MONSTER_TYPES[number];
 
 // Monster
@@ -99,20 +99,6 @@ export const MONSTER_FAST_ATTACK_BACKOFF = 2000; // 2 seconds
 export const MONSTER_FAST_DASH_FORCE = 8.0;
 export const MONSTER_FAST_DASH_COOLDOWN = 1500; // ms
 
-// Vampire Monster (legendary type)
-export const MONSTER_VAMPIRE_SIZE = 45; // Larger than regular, smaller than boss
-export const MONSTER_VAMPIRE_LIVES = 15; // More HP than regular, less than boss
-export const MONSTER_VAMPIRE_SPEED_PATROL = 1.8; // Very fast patrol
-export const MONSTER_VAMPIRE_SPEED_CHASE = 3.2; // Extremely fast chase
-export const MONSTER_VAMPIRE_ATTACK_BACKOFF = 1500; // 1.5 seconds
-export const MONSTER_VAMPIRE_DASH_COOLDOWN = 1000; // 1 second - very quick dashes
-export const MONSTER_VAMPIRE_DASH_FORCE = 10.0; // Strong dash for life drain
-export const MONSTER_VAMPIRE_ABILITY_COOLDOWN = 6000; // Special vampire abilities
-export const MONSTER_VAMPIRE_LIFE_DRAIN_RANGE = 40; // Life drain attack range
-export const MONSTER_VAMPIRE_LIFE_DRAIN_DAMAGE = 3; // Damage from life drain
-export const MONSTER_VAMPIRE_MIST_DURATION = 2000; // How long mist form lasts
-export const MONSTER_VAMPIRE_MIST_SPEED = 4.0; // Speed in mist form
-
 // Boss Monster (legendary type)
 export const MONSTER_BOSS_SIZE = 93; // Much larger than regular monsters (80% wider total)
 export const MONSTER_BOSS_LIVES = 20; // Much more HP than regular monsters
@@ -138,19 +124,6 @@ export const BOSS_LIGHTNING_DAMAGE = 3;
 export const BOSS_LIGHTNING_RANGE = 80;
 export const BOSS_HEAL_AMOUNT = 5;
 export const BOSS_TELEPORT_RANGE = 100;
-
-// Vampire Abilities
-export const VAMPIRE_ABILITY_TYPES = ['life_drain', 'mist_form', 'bat_swarm', 'hypnosis'] as const;
-export type VampireAbilityType = typeof VAMPIRE_ABILITY_TYPES[number];
-
-// Vampire Ability Parameters
-export const VAMPIRE_LIFE_DRAIN_DAMAGE = 3;
-export const VAMPIRE_LIFE_DRAIN_HEAL = 2; // How much HP vampire gains
-export const VAMPIRE_MIST_DURATION = 2000; // 2 seconds
-export const VAMPIRE_MIST_SPEED = 4.0; // Very fast in mist form
-export const VAMPIRE_BAT_SWARM_COUNT = 3; // How many bats to summon
-export const VAMPIRE_HYPNOSIS_DURATION = 3000; // 3 seconds stun
-export const VAMPIRE_HYPNOSIS_RANGE = 60; // Hypnosis range
 
 // Props (rectangle)
 export const FLASKS_COUNT = 3;

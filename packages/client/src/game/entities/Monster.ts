@@ -1,9 +1,8 @@
 import { BaseEntity } from './';
-import { Effects, Animations } from '../sprites';
+import { Effects } from '../sprites';
 import { Graphics } from 'pixi.js';
 import { Models, Constants } from '@tosios/common';
 import { MonstersTextures } from '../assets/images';
-import { Vampire } from '../assets/images/monsters';
 
 const HURT_COLOR = 0xff0000;
 const ZINDEXES = {
@@ -36,10 +35,6 @@ export class Monster extends BaseEntity {
 
     private _attackPositionY: number = 0;
 
-    // Target tracking
-    private _targetPlayerId: string | null = null;
-    private _currentPlayerId: string | null = null;
-
     // Boss-specific properties
     private _isBoss: boolean = false;
     private _bossHP: number = 0;
@@ -49,23 +44,13 @@ export class Monster extends BaseEntity {
     private _bossGlow: Graphics;
     private _healthBar: Graphics;
 
-    // Target indicator
-    private _targetIndicator: Graphics;
-
-    // Animation tracking
-    private _currentAnimationId: string | null = null;
-    private _isAnimating: boolean = false;
-
     // Init
     constructor(monster: Models.MonsterJSON) {
-        // Choose appropriate texture based on monster type
-        const textures = monster.monsterType === 'vampire' ? Vampire : MonstersTextures.Monster;
-
         super({
             x: monster.x,
             y: monster.y,
             radius: monster.radius,
-            textures: textures,
+            textures: MonstersTextures.Monster,
             zIndex: ZINDEXES.MONSTER,
         });
 
@@ -102,11 +87,6 @@ export class Monster extends BaseEntity {
         this._shadow.endFill();
         this.container.addChild(this._shadow);
 
-        // Create target indicator
-        this._targetIndicator = new Graphics();
-        this._targetIndicator.zIndex = ZINDEXES.MONSTER + 1; // Above monster
-        this.container.addChild(this._targetIndicator);
-
         // Sort rendering order
         this.container.sortChildren();
     }
@@ -116,7 +96,7 @@ export class Monster extends BaseEntity {
         Effects.flash(this.sprite, HURT_COLOR, 0xffffff);
     }
 
-    updateFromServer(monster: Models.MonsterJSON, currentPlayerId?: string) {
+    updateFromServer(monster: Models.MonsterJSON) {
         // Update position and rotation
         this.x = monster.x;
         this.y = monster.y;
@@ -132,13 +112,6 @@ export class Monster extends BaseEntity {
         this._cooldownUntil = monster.cooldownUntil;
         this._attackPositionX = monster.attackPositionX;
         this._attackPositionY = monster.attackPositionY;
-        this._targetPlayerId = monster.targetPlayerId;
-        this._currentPlayerId = currentPlayerId || null;
-
-        // Handle knockback animation when monster can't attack
-        if (monster.cantAttack && this._targetPlayerId) {
-            this.handleCantAttackKnockback();
-        }
 
         // Update boss-specific properties
         this._isBoss = monster.isBoss;
@@ -183,9 +156,6 @@ export class Monster extends BaseEntity {
             case 'boss':
                 this.sprite.tint = 0x66ccff; // Bright blue for cold boss
                 break;
-            case 'vampire':
-                this.sprite.tint = 0x8B008B; // Dark magenta (vampire purple)
-                break;
             default:
                 this.sprite.tint = 0xcccccc; // Default light gray
                 break;
@@ -224,9 +194,6 @@ export class Monster extends BaseEntity {
 
         // Add scale effects for different behaviors
         this.updateScaleEffects();
-
-        // Update target indicator
-        this.updateTargetIndicator();
 
         // Update boss visual effects
         if (this._isBoss) {
@@ -284,11 +251,6 @@ export class Monster extends BaseEntity {
             // Aggressive monsters squash during knockback
             const squashScale = 0.9 + Math.sin(time * 10) * 0.1;
             this.sprite.scale.set(1.1, squashScale);
-        } else if (this._monsterType === 'vampire') {
-            // Vampire has larger size and subtle ethereal pulsing
-            const etherealPulse = 1.0 + Math.sin(time * 1.5) * 0.05;
-            const vampireScale = Constants.MONSTER_VAMPIRE_SIZE / Constants.MONSTER_SIZE; // Scale relative to regular monster
-            this.sprite.scale.set(etherealPulse * vampireScale, etherealPulse * vampireScale);
         } else {
             // Normal scale
             this.sprite.scale.set(1.0, 1.0);
@@ -448,8 +410,6 @@ export class Monster extends BaseEntity {
                 return 0x4444ff; // Blue
             case 'boss':
                 return 0xffaa00; // Golden
-            case 'vampire':
-                return 0x8B008B; // Dark magenta (vampire purple)
             default:
                 return 0xcccccc;
         }
@@ -469,95 +429,6 @@ export class Monster extends BaseEntity {
         const g = Math.max(0, ((baseTint >> 8) & 0xff) - 64);
         const b = Math.max(0, (baseTint & 0xff) - 64);
         return (r << 16) | (g << 8) | b;
-    }
-
-    private updateTargetIndicator() {
-        if (!this._targetIndicator) return;
-
-        // Clear previous indicator
-        this._targetIndicator.clear();
-
-        // Check if this monster is targeting the current player
-        const isTargetingMe = this._targetPlayerId === this._currentPlayerId;
-
-        if (isTargetingMe) {
-            const time = Date.now() * 0.001;
-            const radius = this.radius;
-
-            // Create pulsing red indicator above monster
-            const pulseIntensity = 0.7 + Math.sin(time * 3) * 0.3;
-            const indicatorRadius = radius * 0.8;
-
-            // Outer glow ring
-            this._targetIndicator.beginFill(0xff0000, pulseIntensity * 0.3);
-            this._targetIndicator.drawCircle(0, -radius - 10, indicatorRadius * 1.5);
-            this._targetIndicator.endFill();
-
-            // Inner warning circle
-            this._targetIndicator.beginFill(0xff0000, pulseIntensity * 0.7);
-            this._targetIndicator.drawCircle(0, -radius - 10, indicatorRadius);
-            this._targetIndicator.endFill();
-
-            // White center dot
-            this._targetIndicator.beginFill(0xffffff, pulseIntensity);
-            this._targetIndicator.drawCircle(0, -radius - 10, indicatorRadius * 0.3);
-            this._targetIndicator.endFill();
-
-            // Add exclamation mark for extra warning
-            this._targetIndicator.lineStyle(2, 0xffffff, pulseIntensity);
-            this._targetIndicator.moveTo(0, -radius - 10 - indicatorRadius * 0.5);
-            this._targetIndicator.lineTo(0, -radius - 10 + indicatorRadius * 0.5);
-            this._targetIndicator.moveTo(0, -radius - 10 + indicatorRadius * 0.2);
-            this._targetIndicator.lineTo(0, -radius - 10 + indicatorRadius * 0.5);
-
-            console.log(`🎯 TARGET INDICATOR: Monster is targeting YOU!`);
-        }
-    }
-
-    private handleCantAttackKnockback() {
-        if (this._isAnimating) return; // Don't start new animation if already animating
-
-        const knockbackDistance = this.radius * 3; // Knock back 3 radii away
-        const direction = Math.random() * Math.PI * 2; // Random direction
-
-        console.log(`${this._monsterType.toUpperCase()} can't attack - performing knockback!`);
-
-        // Show "can't attack" indicator
-        if (this.container.parent) {
-            Animations.MonsterEffects.cantAttackIndicator(
-                this.container.parent,
-                this.x,
-                this.y,
-                this.radius
-            );
-        }
-
-        // Perform knockback animation
-        this._currentAnimationId = Animations.animateKnockback({
-            duration: 600,
-            startX: this.x,
-            startY: this.y,
-            distance: knockbackDistance,
-            direction: direction,
-            sprite: this.sprite,
-            onComplete: () => {
-                this._isAnimating = false;
-                this._currentAnimationId = null;
-                console.log(`${this._monsterType.toUpperCase()} knockback complete`);
-            }
-        });
-
-        this._isAnimating = true;
-
-        // Show particle effect
-        if (this.container.parent) {
-            Animations.MonsterEffects.knockbackEffect(
-                this.container.parent,
-                this.x,
-                this.y,
-                direction
-            );
-        }
     }
 
     // Setters
