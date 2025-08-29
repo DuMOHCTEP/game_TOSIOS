@@ -206,23 +206,23 @@ export class Monster extends Circle {
     }
 
     private executeSmartChaseAI(player: Player, distance: number) {
-        const attackDistance = Constants.MONSTER_ATTACK_DISTANCE; // Distance at which monster can attack
+        const attackDistance = 30; // Allow monsters to get closer during chase (was 25, now 30 for more aggressive behavior)
         const speed = this.getChaseSpeed();
         const jerkyMultiplier = this.getJerkyMovementMultiplier();
 
         switch (this.monsterType) {
             case 'bat':
-                // Basic bat: approaches to attack distance and ALWAYS uses dash on attack
+                // Basic bat: approaches aggressively and ALWAYS uses dash on attack
                 this.executeBatChase(player, distance, attackDistance, speed * jerkyMultiplier);
                 break;
 
             case 'aggressive':
-                // Aggressive: approaches quickly to attack
+                // Aggressive: approaches very quickly to attack
                 this.executeAggressiveChase(player, distance, attackDistance, speed * jerkyMultiplier);
                 break;
 
             case 'fast':
-                // Fast: circles and approaches to attack
+                // Fast: circles and approaches aggressively
                 this.executeFastChase(player, distance, attackDistance, speed * jerkyMultiplier);
                 break;
 
@@ -238,106 +238,124 @@ export class Monster extends Circle {
     }
 
     private executeBatChase(player: Player, distance: number, attackDistance: number, moveSpeed: number) {
-        if (distance > attackDistance + 15) {
-            // Move toward player with varied approach angle for realism
+        // Bats are very aggressive - they get very close before attacking
+        if (distance > attackDistance + 20) {
+            // Move toward player aggressively
             const directAngle = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const approachVariation = (Math.sin(Date.now() * 0.005) * 0.3); // Slight angle variation
+            const approachVariation = (Math.sin(Date.now() * 0.008) * 0.4); // More variation for realism
             this.rotation = directAngle + approachVariation;
-            this.move(moveSpeed, this.rotation);
+            this.move(moveSpeed * 1.1, this.rotation);
         } else if (distance > attackDistance) {
-            // Close to attack distance - prepare for dash attack
+            // Very close - prepare for dash attack
             this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            this.move(moveSpeed * 0.5, this.rotation);
+            this.move(moveSpeed * 0.3, this.rotation);
 
-            // Bat ALWAYS uses dash when attacking
-            if (distance <= attackDistance && this.canAttack) {
+            // Bat ALWAYS uses dash when attacking - even if very close
+            if (distance <= attackDistance + 5 && this.canAttack) {
                 this.startDash(player.x, player.y);
             }
-        } else if (distance < attackDistance - 3) {
-            // Too close, move away slightly
-            this.rotation = Maths.calculateAngle(this.x, this.y, player.x, player.y);
-            this.move(moveSpeed * 0.4, this.rotation);
+        } else if (distance < attackDistance - 1) {
+            // Very close - just stay and attack
+            // Don't move away, let the player handle positioning
+            if (Math.random() < 0.05) {
+                const smallMovement = (Math.random() - 0.5) * 0.1;
+                this.move(moveSpeed * smallMovement, Math.random() * Math.PI * 2);
+            }
         } else {
-            // At attack distance - can attack when cooldown allows
-            // Small varied movement to approach from different angles
-            if (Math.random() < 0.03) {
-                const variedAngle = Maths.calculateAngle(player.x, player.y, this.x, this.y) + (Math.random() - 0.5) * 0.5;
-                this.move(moveSpeed * 0.2, variedAngle);
+            // At optimal attack distance - prepare to attack
+            if (this.canAttack) {
+                this.startDash(player.x, player.y);
+            } else {
+                // Small random movement while waiting for cooldown
+                if (Math.random() < 0.02) {
+                    const randomAngle = Math.random() * Math.PI * 2;
+                    this.move(moveSpeed * 0.1, randomAngle);
+                }
             }
         }
     }
 
     private executeBasicChase(player: Player, distance: number, attackDistance: number, moveSpeed: number) {
-        if (distance > attackDistance + 10) {
-            // Move toward player with varied approach for realism
+        if (distance > attackDistance + 15) {
+            // Move toward player aggressively
             const directAngle = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const approachVariation = (Math.sin(Date.now() * 0.003) * 0.2); // Subtle angle variation
+            const approachVariation = (Math.sin(Date.now() * 0.004) * 0.25); // More variation
             this.rotation = directAngle + approachVariation;
-            this.move(moveSpeed, this.rotation);
-        } else if (distance < attackDistance - 5) {
-            // Too close, move away slightly
-            this.rotation = Maths.calculateAngle(this.x, this.y, player.x, player.y);
-            this.move(moveSpeed * 0.3, this.rotation);
+            this.move(moveSpeed * 1.0, this.rotation);
+        } else if (distance > attackDistance) {
+            // Close to attack distance - slow down
+            this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+            this.move(moveSpeed * 0.4, this.rotation);
+        } else if (distance < attackDistance - 2) {
+            // Very close - minimal movement
+            if (Math.random() < 0.03) {
+                const smallAngle = Maths.calculateAngle(this.x, this.y, player.x, player.y);
+                this.move(moveSpeed * 0.1, smallAngle);
+            }
         } else {
-            // At attack distance - can attack when cooldown allows
+            // At attack distance - ready to attack
             // Small random movement to avoid being completely static
-            if (Math.random() < 0.02) {
+            if (Math.random() < 0.015) {
                 const randomAngle = Math.random() * Math.PI * 2;
-                this.move(moveSpeed * 0.1, randomAngle);
+                this.move(moveSpeed * 0.05, randomAngle);
             }
         }
     }
 
     private executeAggressiveChase(player: Player, distance: number, attackDistance: number, moveSpeed: number) {
-        if (distance > attackDistance + 40) {
-            // Aggressive approach - faster when far
+        if (distance > attackDistance + 50) {
+            // Very aggressive approach - charge when far
             this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            this.move(moveSpeed * 1.3, this.rotation);
-        } else if (distance > attackDistance + 10) {
+            this.move(moveSpeed * 1.5, this.rotation);
+        } else if (distance > attackDistance + 15) {
             // Fast approach when getting close
             this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            this.move(moveSpeed * 0.8, this.rotation);
+            const chargeVariation = (Math.sin(Date.now() * 0.01) * 0.2);
+            this.move(moveSpeed * 1.0, this.rotation + chargeVariation);
         } else if (distance > attackDistance) {
-            // Slow approach when very close
+            // Very close - slow down but keep moving toward
             this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            this.move(moveSpeed * 0.2, this.rotation);
-        } else if (distance < attackDistance - 3) {
-            // Too close, retreat slightly
-            this.rotation = Maths.calculateAngle(this.x, this.y, player.x, player.y);
-            this.move(moveSpeed * 0.4, this.rotation);
+            this.move(moveSpeed * 0.3, this.rotation);
+        } else if (distance < attackDistance - 2) {
+            // Very close - minimal retreat if needed
+            if (Math.random() < 0.1) {
+                this.rotation = Maths.calculateAngle(this.x, this.y, player.x, player.y);
+                this.move(moveSpeed * 0.1, this.rotation);
+            }
         } else {
-            // At attack distance - aggressive circling
+            // At attack distance - aggressive behavior
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const aggressiveOffset = Math.sin(Date.now() * 0.015) * 0.3;
-            this.move(moveSpeed * 0.1, angleToPlayer + aggressiveOffset);
+            const aggressiveOffset = Math.sin(Date.now() * 0.02) * 0.4;
+            this.move(moveSpeed * 0.15, angleToPlayer + aggressiveOffset);
         }
     }
 
     private executeFastChase(player: Player, distance: number, attackDistance: number, moveSpeed: number) {
-        if (distance > attackDistance + 60) {
-            // Fast approach when far
+        if (distance > attackDistance + 70) {
+            // Very fast approach when far
             this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            this.move(moveSpeed * 1.1, this.rotation);
-        } else if (distance > attackDistance + 20) {
-            // Circling behavior when medium distance
+            this.move(moveSpeed * 1.3, this.rotation);
+        } else if (distance > attackDistance + 25) {
+            // Fast circling behavior when medium distance
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const circleOffset = Math.sin(Date.now() * 0.015) * 0.6; // Fast circular motion
+            const circleOffset = Math.sin(Date.now() * 0.02) * 0.7; // Very fast circular motion
             this.rotation = angleToPlayer + circleOffset;
-            this.move(moveSpeed * 0.8, this.rotation);
+            this.move(moveSpeed * 1.0, this.rotation);
         } else if (distance > attackDistance) {
             // Quick circling when at attack distance
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const fastOffset = Math.sin(Date.now() * 0.02) * 0.4; // Very fast circling
-            this.move(moveSpeed * 0.3, angleToPlayer + fastOffset);
-        } else if (distance < attackDistance - 5) {
+            const fastOffset = Math.sin(Date.now() * 0.025) * 0.5; // Extremely fast circling
+            this.move(moveSpeed * 0.4, angleToPlayer + fastOffset);
+        } else if (distance < attackDistance - 3) {
             // Quick retreat if too close
             this.rotation = Maths.calculateAngle(this.x, this.y, player.x, player.y);
-            this.move(moveSpeed * 1.2, this.rotation);
+            this.move(moveSpeed * 1.0, this.rotation);
         } else {
-            // At attack distance - erratic movement
+            // At attack distance - very erratic movement
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
-            const erraticOffset = Math.sin(Date.now() * 0.03) * 0.2;
-            this.move(moveSpeed * 0.1, angleToPlayer + erraticOffset);
+            const erraticOffset = Math.sin(Date.now() * 0.04) * 0.3;
+            const extraErratic = Math.cos(Date.now() * 0.06) * 0.2;
+            this.move(moveSpeed * 0.2, angleToPlayer + erraticOffset + extraErratic);
         }
     }
 

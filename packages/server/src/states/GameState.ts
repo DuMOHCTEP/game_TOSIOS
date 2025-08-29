@@ -406,6 +406,9 @@ export class GameState extends Schema {
     // Monsters
     //
     private monstersAdd = (count: number) => {
+        // Ensure at least 1 boss always spawns
+        let bossSpawned = false;
+
         for (let i = 0; i < count; i++) {
             const body = this.getPositionRandomly(
                 new Geometry.CircleBody(0, 0, Constants.MONSTER_SIZE / 2),
@@ -413,16 +416,24 @@ export class GameState extends Schema {
                 false,
             );
 
-            // Randomly select monster type with boss rarity
+            // Determine monster type
             let monsterType: Constants.MonsterType;
-            const rand = Math.random();
 
-            if (rand < 0.1) { // 10% chance for boss
+            // First monster is always a boss, or force spawn boss if none spawned yet
+            if (i === 0 || (!bossSpawned && Math.random() < 0.3)) {
                 monsterType = 'boss';
+                bossSpawned = true;
             } else {
-                // Exclude boss from regular selection
-                const regularTypes = Constants.MONSTER_TYPES.filter(type => type !== 'boss');
-                monsterType = regularTypes[Maths.getRandomInt(0, regularTypes.length - 1)];
+                // Random selection for other monsters
+                const rand = Math.random();
+                if (rand < 0.15) { // 15% chance for additional bosses
+                    monsterType = 'boss';
+                    bossSpawned = true;
+                } else {
+                    // Regular monsters
+                    const regularTypes = Constants.MONSTER_TYPES.filter(type => type !== 'boss');
+                    monsterType = regularTypes[Maths.getRandomInt(0, regularTypes.length - 1)];
+                }
             }
 
             const monster = new Monster(
