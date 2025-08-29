@@ -221,29 +221,6 @@ export class GameState extends Schema {
         });
     }
 
-    // Update player's character type
-    playerUpdateCharacter(id: string, characterType: string) {
-        const player = this.players.get(id);
-        if (!player) {
-            console.log(`Player ${id} not found for character update`);
-            return;
-        }
-
-        player.characterType = characterType;
-        console.log(`${new Date().toISOString()} [CharacterUpdate] id=${id} character=${characterType}`);
-
-        // Broadcast character change to all players
-        this.onMessage({
-            type: 'characterChanged',
-            from: 'server',
-            ts: Date.now(),
-            params: {
-                playerId: id,
-                characterType: characterType,
-            },
-        });
-    }
-
     playerPushAction(action: Models.ActionJSON) {
         this.actions.push(action);
     }

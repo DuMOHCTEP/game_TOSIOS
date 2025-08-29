@@ -21,7 +21,6 @@ import { Helmet } from 'react-helmet';
 import { RoomAvailable } from 'colyseus.js/lib/Room';
 import qs from 'querystringify';
 import { useAnalytics } from '../hooks';
-import { archerIdleTexture, playerIdleTextures } from '../game/assets/images/player';
 
 const MapsList: IListItem[] = Constants.MAPS_NAMES.map((value) => ({
     value,
@@ -37,8 +36,6 @@ const GameModesList: IListItem[] = Constants.GAME_MODES.map((value) => ({
     value,
     title: value,
 }));
-
-// CharactersList больше не нужен в создании комнаты
 
 interface IProps extends RouteComponentProps {}
 

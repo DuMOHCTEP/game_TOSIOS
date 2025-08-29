@@ -2,7 +2,6 @@ import { CircleBody } from '../geometry';
 import { Maths } from '..';
 import { Teams } from '../types';
 import { TreeCollider } from '../collisions';
-import { CharacterType } from '../constants';
 
 export interface PlayerJSON {
     x: number;
@@ -16,7 +15,6 @@ export interface PlayerJSON {
     team?: Teams;
     color: string;
     kills: number;
-    characterType: CharacterType;
     ack?: number;
 }
 

@@ -2,11 +2,9 @@ import { Constants, Maths, Models, Types } from '@tosios/common';
 import { Container, Graphics, Sprite, Texture, utils } from 'pixi.js';
 import { Effects, PlayerLivesSprite, TextSprite } from '../sprites';
 import { PlayerTextures, WeaponTextures } from '../assets/images';
-import { archerSpriteSheets, createFramesFromSpriteSheetAtRuntime } from '../assets/images/player';
 import { SmokeConfig, SmokeTexture } from '../assets/particles';
 import { BaseEntity } from '.';
 import { Emitter } from 'pixi-particles';
-import { CharacterType } from '@tosios/common';
 
 const NAME_OFFSET = 4;
 const LIVES_OFFSET = 10;
@@ -40,14 +38,7 @@ export class Player extends BaseEntity {
 
     private _kills: number = 0;
 
-    private _characterType: CharacterType = 'warrior';
-
     private _rotation: number = 0;
-
-    // Animation states for archer
-    private _currentAnimationState: 'idle' | 'run' | 'shoot' = 'idle';
-    private _archerTextures: { [key: string]: Texture[] } = {};
-    private _isLoadingArcherTextures = false;
 
     // Computed
     private _isGhost: boolean = false;
@@ -80,16 +71,12 @@ export class Player extends BaseEntity {
             x: player.x,
             y: player.y,
             radius: player.radius,
-            textures: getTexture(player.lives, player.characterType || 'warrior'),
+            textures: getTexture(player.lives),
             zIndex: ZINDEXES.PLAYER,
         });
 
-        // Initialize character type
-        this._characterType = player.characterType || 'warrior';
-
-        // Weapon (depends on character type)
-        const weaponTexture = this._characterType === 'archer' ? WeaponTextures.arrow : WeaponTextures.staff;
-        this._weaponSprite = new Sprite(weaponTexture);
+        // Weapon
+        this._weaponSprite = new Sprite(WeaponTextures.staff);
         this._weaponSprite.anchor.set(0, 0.5);
         this._weaponSprite.position.set(player.radius, player.radius);
         this._weaponSprite.zIndex = ZINDEXES.WEAPON_BACK;
@@ -413,162 +400,6 @@ export class Player extends BaseEntity {
         return this._lastShootAt;
     }
 
-    get characterType() {
-        return this._characterType;
-    }
-
-    set characterType(value: CharacterType) {
-        this._characterType = value;
-    }
-
-    // Load archer textures asynchronously
-    private async loadArcherTextures() {
-        if (this._isLoadingArcherTextures || this._characterType !== 'archer') {
-            return;
-        }
-
-        this._isLoadingArcherTextures = true;
-
-        try {
-            // Load all archer animation frames
-            const [idleFrames, runFrames, shootFrames] = await Promise.all([
-                createFramesFromSpriteSheetAtRuntime(
-                    archerSpriteSheets.idle.image,
-                    archerSpriteSheets.idle.frameCount,
-                    archerSpriteSheets.idle.frameWidth,
-                    archerSpriteSheets.idle.frameHeight
-                ),
-                createFramesFromSpriteSheetAtRuntime(
-                    archerSpriteSheets.run.image,
-                    archerSpriteSheets.run.frameCount,
-                    archerSpriteSheets.run.frameWidth,
-                    archerSpriteSheets.run.frameHeight
-                ),
-                createFramesFromSpriteSheetAtRuntime(
-                    archerSpriteSheets.shoot.image,
-                    archerSpriteSheets.shoot.frameCount,
-                    archerSpriteSheets.shoot.frameWidth,
-                    archerSpriteSheets.shoot.frameHeight
-                )
-            ]);
-
-            this._archerTextures = {
-                idle: idleFrames,
-                run: runFrames,
-                shoot: shootFrames
-            };
-
-            console.log('✅ Archer textures loaded successfully');
-            console.log(`   Idle: ${idleFrames.length} frames`);
-            console.log(`   Run: ${runFrames.length} frames`);
-            console.log(`   Shoot: ${shootFrames.length} frames`);
-
-            // Apply current animation state
-            this.updateArcherAnimation();
-
-        } catch (error) {
-            console.error('❌ Failed to load archer textures:', error);
-        } finally {
-            this._isLoadingArcherTextures = false;
-        }
-    }
-
-    // Update archer animation based on current state
-    private updateArcherAnimation() {
-        if (this._characterType !== 'archer' || !this.sprite) {
-            return;
-        }
-
-        const frames = this._archerTextures[this._currentAnimationState];
-        if (frames && frames.length > 0) {
-            this.sprite.textures = frames;
-            this.sprite.gotoAndStop(0);
-
-            // Play animation if multiple frames
-            if (frames.length > 1) {
-                this.sprite.animationSpeed = this._currentAnimationState === 'shoot' ? 0.2 : 0.15;
-                this.sprite.play();
-            } else {
-                this.sprite.stop();
-            }
-        }
-    }
-
-    // Update textures when character type changes
-    updateTexturesForCharacter(characterType: CharacterType) {
-        this._characterType = characterType;
-
-        if (characterType === 'archer') {
-            // Load archer textures if not already loaded
-            if (Object.keys(this._archerTextures).length === 0) {
-                this.loadArcherTextures();
-            } else {
-                // Apply current animation
-                this.updateArcherAnimation();
-            }
-        } else {
-            // Use warrior textures
-            const newTextures = getTexture(this._lives, characterType);
-            this.textures = newTextures;
-
-            if (this.sprite && newTextures.length > 0) {
-                this.sprite.textures = newTextures;
-                this.sprite.gotoAndStop(0);
-
-                if (newTextures.length > 1) {
-                    this.sprite.animationSpeed = 0.1;
-                    this.sprite.play();
-                } else {
-                    this.sprite.stop();
-                }
-            }
-        }
-
-        // Update weapon
-        this.updateWeaponForCharacter(characterType);
-    }
-
-    // Update weapon when character type changes
-    updateWeaponForCharacter(characterType: CharacterType) {
-        const weaponTexture = characterType === 'archer' ? WeaponTextures.arrow : WeaponTextures.staff;
-        this._weaponSprite.texture = weaponTexture;
-    }
-
-    // Set archer animation state
-    setArcherAnimationState(state: 'idle' | 'run' | 'shoot') {
-        if (this._characterType !== 'archer') {
-            return;
-        }
-
-        this._currentAnimationState = state;
-
-        // For shoot animation, we might want to play it once and then return to idle
-        if (state === 'shoot' && this._archerTextures.shoot) {
-            // Set up one-time animation
-            this.sprite.loop = false;
-            this.sprite.onComplete = () => {
-                this.setArcherAnimationState('idle');
-            };
-        }
-
-        this.updateArcherAnimation();
-    }
-
-    // Update archer animation based on movement
-    updateArcherAnimationByMovement(isMoving: boolean, isShooting: boolean = false) {
-        if (this._characterType !== 'archer') {
-            return;
-        }
-
-        if (isShooting) {
-            this.setArcherAnimationState('shoot');
-        } else if (isMoving) {
-            this.setArcherAnimationState('run');
-        } else {
-            this.setArcherAnimationState('idle');
-        }
-    }
-
     get isAlive() {
         return this._lives > 0;
     }
@@ -577,21 +408,8 @@ export class Player extends BaseEntity {
 /**
  * Return a texture depending on the number of lives.
  */
-const getTexture = (lives: number, characterType: CharacterType): Texture[] => {
-    if (lives <= 0) {
-        return PlayerTextures.playerDeadTextures;
-    }
-
-    // Return different textures based on character type
-    switch (characterType) {
-        case 'archer':
-            // Archer textures will be loaded asynchronously via loadArcherTextures()
-            // Return a placeholder for now
-            return [PIXI.Texture.WHITE]; // Placeholder texture
-        case 'warrior':
-        default:
-            return PlayerTextures.playerIdleTextures;
-    }
+const getTexture = (lives: number): Texture[] => {
+    return lives > 0 ? PlayerTextures.playerIdleTextures : PlayerTextures.playerDeadTextures;
 };
 
 /**
