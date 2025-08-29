@@ -118,11 +118,18 @@ export class Monster extends BaseEntity {
         this._bossHP = monster.bossHP;
         this._bossMaxHP = monster.bossMaxHP;
 
+        console.log(`🔄 SERVER UPDATE: isBoss=${monster.isBoss}, bossHP=${monster.bossHP}/${monster.bossMaxHP}, type=${monster.monsterType}`);
+        console.log(`📊 CLIENT STATE: _isBoss=${this._isBoss}, _bossHP=${this._bossHP}/${this._bossMaxHP}, _monsterType=${this._monsterType}`);
+
         // Handle boss visual effects creation/destruction
         if (this._isBoss && !wasBoss) {
+            console.log('🎯 BECOMING BOSS - creating visual effects!');
             this.createBossVisualEffects();
         } else if (!this._isBoss && wasBoss) {
+            console.log('❌ STOPPING BOSS - destroying visual effects!');
             this.destroyBossVisualEffects();
+        } else if (this._isBoss && wasBoss) {
+            console.log('🔄 STAYING BOSS - updating effects!');
         }
 
         // Reapply base tint if monster type changed
@@ -190,11 +197,14 @@ export class Monster extends BaseEntity {
 
         // Update boss visual effects
         if (this._isBoss) {
+            console.log(`🎯 UPDATING BOSS VISUALS - HP: ${this._bossHP}/${this._bossMaxHP}, Radius: ${this.radius}`);
             this.updateBossVisualEffects();
             // Debug: check if boss glow exists
             if (!this._bossGlow) {
-                console.log('Boss glow is null, recreating...');
+                console.log('❌ Boss glow is null, recreating...');
                 this.createBossVisualEffects();
+            } else {
+                console.log('✅ Boss glow exists, updating...');
             }
         }
     }
@@ -247,6 +257,9 @@ export class Monster extends BaseEntity {
     }
 
     private createBossVisualEffects() {
+        console.log('🎨 Creating boss visual effects...');
+        console.log(`👑 BOSS STATS: HP=${this._bossHP}/${this._bossMaxHP}, Radius=${this.radius}, Type=${this._monsterType}`);
+
         // Create glowing aura around boss
         this._bossGlow = new Graphics();
         this._bossGlow.zIndex = ZINDEXES.SHADOW - 1; // Behind everything else
@@ -257,6 +270,10 @@ export class Monster extends BaseEntity {
 
         this.container.addChild(this._bossGlow);
         this.container.addChild(this._healthBar);
+
+        console.log('✅ Boss visual effects created successfully');
+        console.log(`🎨 Boss glow: ${this._bossGlow ? 'EXISTS' : 'NULL'}`);
+        console.log(`❤️ Boss health bar: ${this._healthBar ? 'EXISTS' : 'NULL'}`);
 
         this.updateBossVisualEffects();
     }
@@ -270,9 +287,13 @@ export class Monster extends BaseEntity {
         const time = Date.now() * 0.001;
         const radius = this.radius;
 
+        console.log(`⚡ Boss aura update: radius=${radius}, time=${time.toFixed(2)}, intensity=${glowIntensity}`);
+
         // Update epic boss aura
         this._bossGlow.clear();
         const glowIntensity = 0.6 + Math.sin(time * 1.5) * 0.2; // Very strong pulsing
+
+        console.log(`🎨 Drawing boss aura with ${glowIntensity.toFixed(2)} intensity`);
 
         // Core energy sphere
         this._bossGlow.beginFill(0xffffff, glowIntensity * 0.8);

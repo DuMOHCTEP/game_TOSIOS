@@ -95,9 +95,11 @@ export class Monster extends Circle {
         const actualType = monsterType || 'bat';
         const isBossMonster = actualType === 'boss';
 
-        // Set boss-specific properties before super()
+        console.log(`👹 Creating monster: type=${actualType}, isBoss=${isBossMonster}, radius=${radius}, lives=${lives}`);
+
+        // Don't override radius - it's already set correctly from GameState
+        // Only override lives for boss
         if (isBossMonster) {
-            radius = (Constants.MONSTER_BOSS_SIZE / 2) * 1.5; // 50% larger
             lives = Constants.MONSTER_BOSS_LIVES;
         }
 

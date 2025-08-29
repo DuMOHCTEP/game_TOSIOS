@@ -410,8 +410,10 @@ export class GameState extends Schema {
         let bossSpawned = false;
 
         for (let i = 0; i < count; i++) {
+            // Use boss size for boss monsters, regular size for others
+            const monsterRadius = monsterType === 'boss' ? Constants.MONSTER_BOSS_SIZE / 2 : Constants.MONSTER_SIZE / 2;
             const body = this.getPositionRandomly(
-                new Geometry.CircleBody(0, 0, Constants.MONSTER_SIZE / 2),
+                new Geometry.CircleBody(0, 0, monsterRadius),
                 false,
                 false,
             );
@@ -436,13 +438,16 @@ export class GameState extends Schema {
                 }
             }
 
+            // Use boss lives for boss monsters
+            const monsterLives = monsterType === 'boss' ? Constants.MONSTER_BOSS_LIVES : Constants.MONSTER_LIVES;
+
             const monster = new Monster(
                 body.x,
                 body.y,
                 body.width / 2,
                 this.map.width,
                 this.map.height,
-                Constants.MONSTER_LIVES,
+                monsterLives,
                 monsterType
             );
 
