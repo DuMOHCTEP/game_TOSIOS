@@ -1,4 +1,4 @@
-import { MonsterType } from '../constants';
+import { MonsterType, BossAbilityType } from '../constants';
 
 export interface MonsterJSON {
     x: number;
@@ -12,4 +12,20 @@ export interface MonsterJSON {
     cooldownUntil: number;
     attackPositionX: number;
     attackPositionY: number;
+    // Boss-specific fields
+    isBoss: boolean;
+    bossHP: number;
+    bossMaxHP: number;
+    lastAbilityUsed: number;
+    abilityCooldown: number;
+}
+
+export interface BossAbilityJSON {
+    type: BossAbilityType;
+    x: number;
+    y: number;
+    targetX: number;
+    targetY: number;
+    damage: number;
+    speed: number;
 }

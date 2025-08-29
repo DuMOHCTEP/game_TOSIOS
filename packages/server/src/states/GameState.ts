@@ -413,8 +413,17 @@ export class GameState extends Schema {
                 false,
             );
 
-            // Randomly select monster type
-            const monsterType = Constants.MONSTER_TYPES[Maths.getRandomInt(0, Constants.MONSTER_TYPES.length - 1)];
+            // Randomly select monster type with boss rarity
+            let monsterType: Constants.MonsterType;
+            const rand = Math.random();
+
+            if (rand < 0.1) { // 10% chance for boss
+                monsterType = 'boss';
+            } else {
+                // Exclude boss from regular selection
+                const regularTypes = Constants.MONSTER_TYPES.filter(type => type !== 'boss');
+                monsterType = regularTypes[Maths.getRandomInt(0, regularTypes.length - 1)];
+            }
 
             const monster = new Monster(
                 body.x,

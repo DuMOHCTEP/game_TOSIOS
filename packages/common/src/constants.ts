@@ -33,7 +33,7 @@ export const PLAYER_WEAPON_SIZE = 12; // The bigger, the further away a bullet w
 export const PLAYER_HEARING_DISTANCE = 256;
 
 // Monster Types
-export const MONSTER_TYPES = ['bat', 'aggressive', 'fast'] as const;
+export const MONSTER_TYPES = ['bat', 'aggressive', 'fast', 'boss'] as const;
 export type MonsterType = typeof MONSTER_TYPES[number];
 
 // Monster
@@ -70,6 +70,26 @@ export const MONSTER_FAST_SPEED_CHASE = 2.5;
 export const MONSTER_FAST_ATTACK_BACKOFF = 2000; // 2 seconds
 export const MONSTER_FAST_DASH_FORCE = 8.0;
 export const MONSTER_FAST_DASH_COOLDOWN = 1500; // ms
+
+// Boss Monster (legendary type)
+export const MONSTER_BOSS_SIZE = 48; // Larger than regular monsters
+export const MONSTER_BOSS_LIVES = 20; // Much more HP than regular monsters
+export const MONSTER_BOSS_SPEED_PATROL = 0.8;
+export const MONSTER_BOSS_SPEED_CHASE = 1.8;
+export const MONSTER_BOSS_ATTACK_BACKOFF = 1500; // Faster attacks
+export const MONSTER_BOSS_ABILITY_COOLDOWN = 5000; // Special ability cooldown
+
+// Boss Abilities
+export const BOSS_ABILITY_TYPES = ['fireball', 'lightning', 'heal', 'summon', 'teleport'] as const;
+export type BossAbilityType = typeof BOSS_ABILITY_TYPES[number];
+
+// Boss Ability Parameters
+export const BOSS_FIREBALL_DAMAGE = 2;
+export const BOSS_FIREBALL_SPEED = 3.0;
+export const BOSS_LIGHTNING_DAMAGE = 3;
+export const BOSS_LIGHTNING_RANGE = 80;
+export const BOSS_HEAL_AMOUNT = 5;
+export const BOSS_TELEPORT_RANGE = 100;
 
 // Props (rectangle)
 export const FLASKS_COUNT = 3;

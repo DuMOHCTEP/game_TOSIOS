@@ -72,14 +72,35 @@ export class Monster extends Circle {
     private attackPositionX: number = 0;
     private attackPositionY: number = 0;
 
+    // Boss-specific properties
+    private isBoss: boolean = false;
+    private bossHP: number = 0;
+    private bossMaxHP: number = 0;
+    private lastAbilityUsed: number = 0;
+    private abilityCooldown: number = 0;
+    private currentAbilityPattern: number = 0; // For varied ability usage
+    private lastPatternChange: number = 0;
+
     // Init
     constructor(x: number, y: number, radius: number, mapWidth: number, mapHeight: number, lives: number, monsterType?: MonsterType) {
+        // Initialize boss properties first
+        this.monsterType = monsterType || 'bat';
+        this.isBoss = this.monsterType === 'boss';
+
+        // Set boss-specific properties
+        if (this.isBoss) {
+            radius = Constants.MONSTER_BOSS_SIZE / 2;
+            lives = Constants.MONSTER_BOSS_LIVES;
+            this.bossHP = Constants.MONSTER_BOSS_LIVES;
+            this.bossMaxHP = Constants.MONSTER_BOSS_LIVES;
+            this.abilityCooldown = Constants.MONSTER_BOSS_ABILITY_COOLDOWN;
+        }
+
         super(x, y, radius);
 
         this.mapWidth = mapWidth;
         this.mapHeight = mapHeight;
         this.lives = lives;
-        this.monsterType = monsterType || 'bat';
     }
 
     // Update
@@ -198,6 +219,11 @@ export class Monster extends Circle {
                 this.executeFastChase(player, distance, attackDistance, speed * jerkyMultiplier);
                 break;
 
+            case 'boss':
+                // Boss: complex AI with abilities
+                this.executeBossChase(player, distance, attackDistance, speed * jerkyMultiplier);
+                break;
+
             default:
                 this.executeBasicChase(player, distance, attackDistance, speed * jerkyMultiplier);
                 break;
@@ -283,7 +309,7 @@ export class Monster extends Circle {
     private executeFastChase(player: Player, distance: number, attackDistance: number, moveSpeed: number) {
         if (distance > attackDistance + 60) {
             // Fast approach when far
-        this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+            this.rotation = Maths.calculateAngle(player.x, player.y, this.x, this.y);
             this.move(moveSpeed * 1.1, this.rotation);
         } else if (distance > attackDistance + 20) {
             // Circling behavior when medium distance
@@ -305,6 +331,47 @@ export class Monster extends Circle {
             const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
             const erraticOffset = Math.sin(Date.now() * 0.03) * 0.2;
             this.move(moveSpeed * 0.1, angleToPlayer + erraticOffset);
+        }
+    }
+
+    private executeBossChase(player: Player, distance: number, attackDistance: number, moveSpeed: number) {
+        const time = Date.now() * 0.001;
+
+        // Boss has complex behavior patterns
+        if (distance > attackDistance + 100) {
+            // Long range - slow majestic approach
+            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+            const majesticOffset = Math.sin(time * 0.3) * 0.3;
+            this.move(moveSpeed * 0.7, angleToPlayer + majesticOffset);
+        } else if (distance > attackDistance + 50) {
+            // Medium range - circling and ability usage
+            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+            const circleOffset = Math.sin(time * 0.8) * 0.5;
+            this.move(moveSpeed * 0.5, angleToPlayer + circleOffset);
+
+            // Try to use abilities
+            if (this.canUseAbility()) {
+                this.useRandomAbility(player);
+            }
+        } else if (distance > attackDistance) {
+            // Close range - aggressive circling before attack
+            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+            const aggressiveOffset = Math.sin(time * 1.2) * 0.4;
+            this.move(moveSpeed * 0.3, angleToPlayer + aggressiveOffset);
+        } else if (distance < attackDistance - 10) {
+            // Too close - strategic retreat
+            const retreatAngle = Maths.calculateAngle(this.x, this.y, player.x, player.y);
+            this.move(moveSpeed * 1.5, retreatAngle);
+        } else {
+            // At attack distance - perform attack pattern
+            const angleToPlayer = Maths.calculateAngle(player.x, player.y, this.x, this.y);
+            const attackOffset = Math.sin(time * 2.0) * 0.2;
+            this.move(moveSpeed * 0.1, angleToPlayer + attackOffset);
+
+            // Use ability instead of regular attack sometimes
+            if (Math.random() < 0.3 && this.canUseAbility()) {
+                this.useRandomAbility(player);
+            }
         }
     }
 
@@ -431,6 +498,115 @@ export class Monster extends Circle {
             const angle = Maths.calculateAngle(this.attackPositionX, this.attackPositionY, this.x, this.y);
             this.move(0.2, angle);
         }
+    }
+
+    // Boss ability methods
+    private canUseAbility(): boolean {
+        if (!this.isBoss) return false;
+        return Date.now() - this.lastAbilityUsed >= this.abilityCooldown;
+    }
+
+    private useRandomAbility(player: Player) {
+        if (!this.isBoss) return;
+
+        // Change ability pattern every 15 seconds for variety
+        if (Date.now() - this.lastPatternChange > 15000) {
+            this.currentAbilityPattern = (this.currentAbilityPattern + 1) % 3;
+            this.lastPatternChange = Date.now();
+        }
+
+        const abilities = this.getAbilitiesForPattern(this.currentAbilityPattern);
+        const randomAbility = abilities[Math.floor(Math.random() * abilities.length)];
+
+        this.castAbility(randomAbility, player);
+        this.lastAbilityUsed = Date.now();
+    }
+
+    private getAbilitiesForPattern(pattern: number): Constants.BossAbilityType[] {
+        switch (pattern) {
+            case 0:
+                return ['fireball', 'lightning']; // Offensive pattern
+            case 1:
+                return ['heal', 'teleport']; // Defensive/support pattern
+            case 2:
+                return ['fireball', 'lightning', 'teleport']; // Mixed pattern
+            default:
+                return ['fireball'];
+        }
+    }
+
+    private castAbility(abilityType: Constants.BossAbilityType, player: Player) {
+        switch (abilityType) {
+            case 'fireball':
+                this.castFireball(player);
+                break;
+            case 'lightning':
+                this.castLightning(player);
+                break;
+            case 'heal':
+                this.castHeal();
+                break;
+            case 'teleport':
+                this.castTeleport(player);
+                break;
+            case 'summon':
+                this.castSummon();
+                break;
+        }
+    }
+
+    private castFireball(player: Player) {
+        // Fireball ability - deals damage to player
+        const damage = Constants.BOSS_FIREBALL_DAMAGE;
+        // In a real implementation, this would create a projectile
+        // For now, just apply direct damage if player is close
+        const distance = Maths.getDistance(this.x, this.y, player.x, player.y);
+        if (distance < 100) {
+            // Simulate fireball hit
+            console.log(`Boss casts fireball! Deals ${damage} damage to player`);
+        }
+    }
+
+    private castLightning(player: Player) {
+        // Lightning ability - area damage
+        const damage = Constants.BOSS_LIGHTNING_DAMAGE;
+        const range = Constants.BOSS_LIGHTNING_RANGE;
+        const distance = Maths.getDistance(this.x, this.y, player.x, player.y);
+
+        if (distance <= range) {
+            // Player is in range
+            console.log(`Boss casts lightning! Deals ${damage} damage in ${range}px radius`);
+        }
+    }
+
+    private castHeal() {
+        // Heal ability - restore HP
+        const healAmount = Constants.BOSS_HEAL_AMOUNT;
+        const oldHP = this.bossHP;
+        this.bossHP = Math.min(this.bossMaxHP, this.bossHP + healAmount);
+        console.log(`Boss heals! HP: ${oldHP} -> ${this.bossHP}`);
+    }
+
+    private castTeleport(player: Player) {
+        // Teleport ability - move to random location near player
+        const teleportRange = Constants.BOSS_TELEPORT_RANGE;
+        const angle = Math.random() * Math.PI * 2;
+        const distance = teleportRange * 0.5 + Math.random() * teleportRange * 0.5;
+
+        const newX = player.x + Math.cos(angle) * distance;
+        const newY = player.y + Math.sin(angle) * distance;
+
+        // Keep within map bounds
+        this.x = Maths.clamp(newX, 0, this.mapWidth);
+        this.y = Maths.clamp(newY, 0, this.mapHeight);
+
+        console.log(`Boss teleports to new position!`);
+    }
+
+    private castSummon() {
+        // Summon ability - would create additional monsters
+        console.log(`Boss summons minions!`);
+        // In a real implementation, this would spawn additional monsters
     }
 
     // New monster mechanics
@@ -607,8 +783,13 @@ export class Monster extends Circle {
         return false;
     }
 
-    hurt() {
-        this.lives -= 1;
+    hurt(damage: number = 1) {
+        if (this.isBoss) {
+            this.bossHP -= damage;
+            this.lives = Math.ceil(this.bossHP / (this.bossMaxHP / this.lives)); // Sync with base lives system
+        } else {
+            this.lives -= damage;
+        }
     }
 
     move(speed: number, rotation: number) {
@@ -651,6 +832,23 @@ export class Monster extends Circle {
 
     get isCurrentlyDashing(): boolean {
         return this.isDashing;
+    }
+
+    // Boss-specific getters
+    get isBossMonster(): boolean {
+        return this.isBoss;
+    }
+
+    get bossHealth(): number {
+        return this.isBoss ? this.bossHP : this.lives;
+    }
+
+    get bossMaxHealth(): number {
+        return this.isBoss ? this.bossMaxHP : this.lives;
+    }
+
+    get bossHealthPercentage(): number {
+        return this.isBoss ? (this.bossHP / this.bossMaxHP) * 100 : 100;
     }
 }
 

@@ -35,6 +35,15 @@ export class Monster extends BaseEntity {
 
     private _attackPositionY: number = 0;
 
+    // Boss-specific properties
+    private _isBoss: boolean = false;
+    private _bossHP: number = 0;
+    private _bossMaxHP: number = 0;
+
+    // Boss visual effects
+    private _bossGlow: Graphics;
+    private _healthBar: Graphics;
+
     // Init
     constructor(monster: Models.MonsterJSON) {
         super({
@@ -53,8 +62,18 @@ export class Monster extends BaseEntity {
         this._attackPositionX = monster.attackPositionX;
         this._attackPositionY = monster.attackPositionY;
 
+        // Boss-specific properties
+        this._isBoss = monster.isBoss;
+        this._bossHP = monster.bossHP;
+        this._bossMaxHP = monster.bossMaxHP;
+
         // Apply color tint based on monster type
         this.applyMonsterTint();
+
+        // Create boss visual effects if this is a boss
+        if (this._isBoss) {
+            this.createBossVisualEffects();
+        }
 
         // Shadow
         this._shadow = new Graphics();
@@ -82,6 +101,7 @@ export class Monster extends BaseEntity {
 
         // Update monster-specific properties
         const typeChanged = this._monsterType !== monster.monsterType;
+        const wasBoss = this._isBoss;
         this._monsterType = monster.monsterType;
         this._knockbackX = monster.knockbackX;
         this._knockbackY = monster.knockbackY;
@@ -89,6 +109,18 @@ export class Monster extends BaseEntity {
         this._cooldownUntil = monster.cooldownUntil;
         this._attackPositionX = monster.attackPositionX;
         this._attackPositionY = monster.attackPositionY;
+
+        // Update boss-specific properties
+        this._isBoss = monster.isBoss;
+        this._bossHP = monster.bossHP;
+        this._bossMaxHP = monster.bossMaxHP;
+
+        // Handle boss visual effects creation/destruction
+        if (this._isBoss && !wasBoss) {
+            this.createBossVisualEffects();
+        } else if (!this._isBoss && wasBoss) {
+            this.destroyBossVisualEffects();
+        }
 
         // Reapply base tint if monster type changed
         if (typeChanged) {
@@ -110,6 +142,9 @@ export class Monster extends BaseEntity {
                 break;
             case 'fast':
                 this.sprite.tint = 0x4444ff; // Blue for fast monster
+                break;
+            case 'boss':
+                this.sprite.tint = 0xffaa00; // Golden for boss monster
                 break;
             default:
                 this.sprite.tint = 0xcccccc; // Default light gray
@@ -149,6 +184,11 @@ export class Monster extends BaseEntity {
 
         // Add scale effects for different behaviors
         this.updateScaleEffects();
+
+        // Update boss visual effects
+        if (this._isBoss) {
+            this.updateBossVisualEffects();
+        }
     }
 
     private adjustTintForAIBehavior(baseTint: number): number {
@@ -179,7 +219,11 @@ export class Monster extends BaseEntity {
     private updateScaleEffects() {
         const time = Date.now() * 0.001;
 
-        if (this._monsterType === 'fast' && Date.now() < this._cooldownUntil) {
+        if (this._isBoss) {
+            // Boss has majestic pulsing
+            const bossPulse = 1.0 + Math.sin(time * 2) * 0.1;
+            this.sprite.scale.set(bossPulse, bossPulse);
+        } else if (this._monsterType === 'fast' && Date.now() < this._cooldownUntil) {
             // Fast monsters have subtle scale pulsing during cooldown
             const scalePulse = 1.0 + Math.sin(time * 8) * 0.05;
             this.sprite.scale.set(scalePulse, scalePulse);
@@ -193,6 +237,75 @@ export class Monster extends BaseEntity {
         }
     }
 
+    private createBossVisualEffects() {
+        // Create glowing aura around boss
+        this._bossGlow = new Graphics();
+        this._bossGlow.zIndex = ZINDEXES.SHADOW - 1; // Behind everything else
+
+        // Create health bar
+        this._healthBar = new Graphics();
+        this._healthBar.zIndex = ZINDEXES.BULLETS + 1; // Above bullets
+
+        this.container.addChild(this._bossGlow);
+        this.container.addChild(this._healthBar);
+
+        this.updateBossVisualEffects();
+    }
+
+    private updateBossVisualEffects() {
+        if (!this._isBoss || !this._bossGlow || !this._healthBar) return;
+
+        const time = Date.now() * 0.001;
+        const radius = this.radius;
+
+        // Update glowing aura
+        this._bossGlow.clear();
+        const glowIntensity = 0.3 + Math.sin(time * 3) * 0.1; // Pulsing glow
+        this._bossGlow.beginFill(0xffaa00, glowIntensity);
+        this._bossGlow.drawCircle(0, 0, radius * 1.5);
+        this._bossGlow.endFill();
+
+        // Inner glow
+        this._bossGlow.beginFill(0xff6600, glowIntensity * 0.7);
+        this._bossGlow.drawCircle(0, 0, radius * 1.2);
+        this._bossGlow.endFill();
+
+        // Update health bar
+        this._healthBar.clear();
+        const barWidth = radius * 2;
+        const barHeight = 6;
+        const healthPercent = this._bossHP / this._bossMaxHP;
+
+        // Background
+        this._healthBar.beginFill(0x333333, 0.8);
+        this._healthBar.drawRect(-barWidth/2, -radius - 15, barWidth, barHeight);
+        this._healthBar.endFill();
+
+        // Health fill
+        const healthColor = healthPercent > 0.5 ? 0x00ff00 : healthPercent > 0.25 ? 0xffff00 : 0xff0000;
+        this._healthBar.beginFill(healthColor, 0.9);
+        this._healthBar.drawRect(-barWidth/2, -radius - 15, barWidth * healthPercent, barHeight);
+        this._healthBar.endFill();
+
+        // Border
+        this._healthBar.lineStyle(1, 0xffffff, 0.8);
+        this._healthBar.drawRect(-barWidth/2, -radius - 15, barWidth, barHeight);
+    }
+
+    private destroyBossVisualEffects() {
+        if (this._bossGlow) {
+            this.container.removeChild(this._bossGlow);
+            this._bossGlow.destroy();
+            this._bossGlow = null;
+        }
+
+        if (this._healthBar) {
+            this.container.removeChild(this._healthBar);
+            this._healthBar.destroy();
+            this._healthBar = null;
+        }
+    }
+
     private getBaseTintForType(): number {
         switch (this._monsterType) {
             case 'bat':
@@ -201,6 +314,8 @@ export class Monster extends BaseEntity {
                 return 0xff4444; // Red
             case 'fast':
                 return 0x4444ff; // Blue
+            case 'boss':
+                return 0xffaa00; // Golden
             default:
                 return 0xcccccc;
         }
@@ -298,6 +413,23 @@ export class Monster extends BaseEntity {
 
     get attackPositionY(): number {
         return this._attackPositionY;
+    }
+
+    // Boss-specific getters
+    get isBoss(): boolean {
+        return this._isBoss;
+    }
+
+    get bossHP(): number {
+        return this._bossHP;
+    }
+
+    get bossMaxHP(): number {
+        return this._bossMaxHP;
+    }
+
+    get bossHealthPercentage(): number {
+        return this._isBoss ? (this._bossHP / this._bossMaxHP) * 100 : 100;
     }
 }
 
