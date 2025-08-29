@@ -1,12 +1,12 @@
 import { Collisions, Constants, Entities, Geometry, Maps, Maths, Models, Tiled, Types } from '@tosios/common';
 import { Emitter } from 'pixi-particles';
 import { Viewport } from 'pixi-viewport';
-import { Application, Container, Graphics, utils } from 'pixi.js';
+import { Application, Container, utils } from 'pixi.js';
 import { GUITextures } from './assets/images';
 import { SpriteSheets } from './assets/images/maps';
 import { ImpactConfig, ImpactTexture } from './assets/particles';
 import { Monster, Player, Prop } from './entities';
-import { BulletsManager, LightingManager, MonstersManager, PlayersManager, PropsManager } from './managers';
+import { BulletsManager, MonstersManager, PlayersManager, PropsManager } from './managers';
 import { distanceBetween } from './utils/distance';
 import { Inputs } from './utils/inputs';
 import { getSpritesLayer, getTexturesSet } from './utils/tiled';
@@ -19,7 +19,6 @@ const ZINDEXES = {
     ME: 5,
     MONSTERS: 6,
     BULLETS: 7,
-    LIGHTING: 8, // Dungeon lighting system
 };
 
 // TODO: These two constants should be calculated automatically.
@@ -69,9 +68,6 @@ export class Game {
 
     private bulletsManager: BulletsManager;
 
-    // Lighting System
-    private lightingManager: LightingManager;
-
     // Collisions
     private walls: Collisions.TreeCollider;
 
@@ -98,12 +94,12 @@ export class Game {
 
     // LIFECYCLE
     constructor(screenWidth: number, screenHeight: number, onActionSend: any) {
-        // App - темный фон для атмосферы подземелья
+        // App
         this.app = new Application({
             width: screenWidth,
             height: screenHeight,
             antialias: false,
-            backgroundColor: 0x0a0a0a, // Очень темный фон вместо обычного
+            backgroundColor: utils.string2hex(Constants.BACKGROUND_COLOR),
             autoDensity: true,
             resolution: window.devicePixelRatio,
         });
@@ -151,12 +147,6 @@ export class Game {
         this.bulletsManager.zIndex = ZINDEXES.BULLETS;
         this.viewport.addChild(this.bulletsManager);
 
-        // Lighting System (Dungeon Atmosphere)
-        this.lightingManager = new LightingManager();
-        this.lightingManager.setEnabled(Constants.LIGHTING_ENABLED);
-        this.lightingManager.getContainer().zIndex = ZINDEXES.LIGHTING;
-        this.viewport.addChild(this.lightingManager.getContainer());
-
         // Viewport
         this.viewport.zoomPercent(utils.isMobile.any ? 0.25 : 1.0);
         this.viewport.sortableChildren = true;
@@ -164,34 +154,6 @@ export class Game {
         // Callbacks
         this.onActionSend = onActionSend;
     }
-
-    // LIGHTING SYSTEM
-    private updateLightingSystem = () => {
-        if (!Constants.LIGHTING_ENABLED || !this.me || !this.lightingManager) return;
-
-        // Получаем позицию игрока в мировых координатах
-        const playerWorldPos = this.viewport.toWorld({ x: this.app.screen.width / 2, y: this.app.screen.height / 2 });
-        const playerX = playerWorldPos.x;
-        const playerY = playerWorldPos.y;
-
-        // Update player light position
-        this.lightingManager.updatePlayerLight(playerX, playerY, this.app.screen.width, this.app.screen.height);
-
-        // Add monster lights
-        const monsters = this.monstersManager.children as any[];
-        monsters.forEach((monster: any) => {
-            if (monster && monster.x !== undefined && monster.y !== undefined) {
-                const distanceToPlayer = Math.sqrt(
-                    Math.pow(monster.x - playerX, 2) + Math.pow(monster.y - playerY, 2)
-                );
-
-                // Only add monster light if it's close enough to be visible
-                if (distanceToPlayer <= Constants.PLAYER_LIGHT_RADIUS + Constants.MONSTER_LIGHT_RADIUS) {
-                    this.lightingManager.addMonsterLight(monster.x, monster.y, distanceToPlayer);
-                }
-            }
-        });
-    };
 
     start = (renderView: any) => {
         renderView.appendChild(this.app.view);
@@ -205,7 +167,6 @@ export class Game {
         this.updatePlayers();
         this.updateMonsters();
         this.updateBullets();
-        this.updateLightingSystem();
 
         this.playersManager.sortChildren();
     };
@@ -351,11 +312,6 @@ export class Game {
         // Parse the selected map
         const data = Maps.List[this.mapName];
         const tiledMap = new Tiled.Map(data, Constants.TILE_SIZE);
-
-        // Load map data for lighting system
-        if (this.lightingManager) {
-            this.lightingManager.loadMapData(data);
-        }
 
         // Set the map boundaries
         this.map.setDimensions(tiledMap.widthInPixels, tiledMap.heightInPixels);
@@ -724,11 +680,6 @@ export class Game {
     bulletAdd = (bulletId: string, attributes: Models.BulletJSON) => {
         if ((this.me && this.me.playerId === attributes.playerId) || !attributes.active) {
             return;
-        }
-
-        // Add flash light effect for new bullets (dungeon atmosphere)
-        if (Constants.LIGHTING_ENABLED && this.lightingManager) {
-            this.lightingManager.addFlashLight(attributes.x, attributes.y);
         }
 
         this.bulletsManager.addOrCreate(attributes, this.particlesContainer);
